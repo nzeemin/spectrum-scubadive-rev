@@ -1,0 +1,6 @@
+/x-*
+/.vscode
+/*.tap
+/*.tzx
+/*.bin
+/*.txt

@@ -1,0 +1,3171 @@
+;----------------------------------------------------------------------------
+
+	INCLUDE "scubacoda.txt"
+
+;----------------------------------------------------------------------------
+
+L5C05	EQU $5C05
+L5C08	EQU $5C08
+L5C78	EQU $5C78
+L5C79	EQU $5C79
+L5C7B	EQU $5C7B
+L5C8D	EQU $5C8D
+
+;----------------------------------------------------------------------------
+
+	ORG $6000
+
+;----------------------------------------------------------------------------
+; Sprites
+
+	INCLUDE "scubasprt.asm"
+
+;----------------------------------------------------------------------------
+
+L9C50	DEFB $00	; $00 = no Octopus, $01 = we have Octopus on the game screen
+L9C51	DEFW $0000	; Octopus row/column
+L9C53	DEFW $A41B	; ???
+L9C55	DEFB $04	; Octopus phase
+
+; Draw game screen
+; I: HL	Screen position on mini-map
+L9C56	DI	
+	LD DE,$4000	
+	XOR A	
+	LD (L9C50),A	
+	PUSH IX	
+	PUSH IY	
+	LD IX,$5800	
+	LD B,$03	; Game screen 3 blocks high = 24 tiles
+	EX DE,HL	
+L9C69	PUSH BC	
+	LD B,$03	; Game screen 3 blocks wide = 24 tiles
+L9C6C	PUSH BC	
+	PUSH IX	
+	EX DE,HL	
+	CALL L9D56	; Calc address in AC5D and Get block number
+	PUSH AF	
+	EX DE,HL	
+	CP $1C		; place for Octopus?
+	JR NZ,L9C89	
+	LD (L9C51),HL	; save the Octopus row/column
+	PUSH HL	
+	LD HL,LA41B	
+	LD (L9C53),HL	
+	POP HL	
+	LD A,$01	
+	LD (L9C50),A	
+L9C89	INC E	
+	LD A,E	
+	AND $1F	
+	LD E,A	
+	POP AF	
+	PUSH DE	
+	PUSH HL	
+	PUSH HL	
+	LD H,A	
+	LD L,$00	
+	SRL H	
+	RR L	
+	SRL H	
+	RR L	
+	LD DE,LA4DD	; base address for relief blocks, 8x8 tiles each block
+	ADD HL,DE	
+	PUSH HL	
+	POP IY	
+	POP HL	
+	LD B,$08	; height for block of tiles = 8
+L9CA7	PUSH BC	
+	LD B,$08	
+L9CAA	PUSH BC	
+	LD A,(IY+$00)	; get tile number
+	PUSH HL	
+	PUSH HL	
+	AND $7F	
+	LD L,A	
+	LD H,$00	
+	ADD HL,HL	
+	ADD HL,HL	
+	ADD HL,HL	; *8
+	LD BC,L9134	; base address for relief tiles, 8x8 pixels each tile
+	ADD HL,BC	
+	POP DE	
+	LD B,$08	
+L9CBF	LD A,(HL)	
+	LD (DE),A	
+	INC HL	
+	INC D	
+	DJNZ L9CBF	
+	POP HL	
+	LD A,(L5B03+1)	
+	OR A	
+	JR NZ,L9CD5	
+	LD A,H	
+	AND $18	
+	JR NZ,L9CD5	
+	LD C,$29	
+	JR L9CEB	
+L9CD5	LD C,$06	
+	LD A,(IY+$00)	
+	OR A	
+	JR Z,L9CEB	
+	CP $32	
+	JR Z,L9CEB	
+	LD C,$02	
+	BIT 7,(IY+$00)	
+	JR Z,L9CEB	
+	LD C,$06	
+L9CEB	LD (IX+$00),C	
+	INC IY	
+	INC IX	
+	INC L	
+	POP BC	
+	DJNZ L9CAA	
+	LD BC,$0018	
+	ADD IX,BC	
+	DEC L	
+	LD A,L	
+	AND $F8	
+	ADD A,$20	
+	LD L,A	
+	POP BC	
+	DJNZ L9CA7	
+	POP HL	
+	LD BC,$0008	
+	ADD HL,BC	
+	POP DE	
+	POP IX	
+	ADD IX,BC	
+	POP BC	
+	DEC B	
+	JP NZ,L9C6C	
+	LD L,$00	
+	LD A,H	
+	ADD A,$08	
+	LD H,A	
+	LD BC,$00E8	
+	ADD IX,BC	
+	INC D	
+	DEC E	
+	DEC E	
+	DEC E	
+	LD A,E	
+	AND $1F	
+	LD E,A	
+	POP BC	
+	DEC B	
+	JP NZ,L9C69	
+	LD A,(L9C50)	
+	OR A	
+	JR Z,L9D38	
+	LD A,(L9C55)	
+	CALL LB346	; Draw Octopus
+L9D38	POP IY	
+L9D3A	POP IX	
+L9D3C	CALL LB0A9	
+L9D3F	RET	
+
+; Calculate address in the mini-map (LAC5D table)
+; I: HL	H = row, L = column 0..31
+L9D40	LD A,L	
+	LD L,$00	
+	SRL H	
+	RR L	
+	SRL H	
+	RR L	
+	SRL H	
+	RR L		; HL shifted right 3 bits
+	OR L	
+	LD L,A		; HL := H * 32 + L
+	LD DE,LAC5D	
+	ADD HL,DE	; HL := $AC5D + H * 32 + L
+	RET	
+
+; Calculate address in the mini-map (LAC5D table) and Get
+; I: H = row, L = column 0..31
+; O: A = value
+L9D56	PUSH HL	
+	PUSH DE	
+	CALL L9D40	; Calculate address in LAC5D table
+	LD A,(HL)	
+	POP DE	
+	POP HL	
+	RET
+
+; Check value in the mini-map (AC5D table), if row and column in range 0..31
+; I: H = row, L = column
+; If column or row is out of range 0..31 - returns flag Z=0;
+; else, gets value from AC5D table;
+; if this value is $01, returns flag Z=1, in other case flag Z=0.
+L9D5F	PUSH HL	
+	PUSH AF	
+	LD A,L	
+	AND $E0		; Column value out of range 0..31 ?
+	JR NZ,L9D73	
+	LD A,H	
+	AND $E0		; Row value out of range 0..31 ?
+	JR NZ,L9D73	
+	CALL L9D56	; Calc address in AC5D and Get
+	LD L,A	
+	POP AF	
+	DEC L	
+	POP HL	
+	RET	
+L9D73	POP AF	
+	LD L,$01	
+	INC L	
+	POP HL	
+	RET	
+
+; Calculate address in the mini-map (AC5D table) and Set
+; I: H = row, L = column 0..31, A = value to set
+L9D79	PUSH HL	
+	PUSH DE	
+	PUSH AF	
+	CALL L9D40	; Calculate address in the mini-map (AC5D table)
+	POP AF	
+	LD (HL),A	
+	POP DE	
+	POP HL	
+	RET
+
+; Random
+; Calculate next number in pseudo-random sequence
+L9D84	LD HL,(L5B05)	
+	LD D,H	
+	LD E,L	
+	ADD HL,HL	; x2
+	ADD HL,HL	; x4
+	ADD HL,HL	; x8
+	ADD HL,HL	; x16
+	PUSH HL	
+	ADD HL,HL	; x32
+	EX (SP),HL	
+	OR A	
+	SBC HL,DE	; HL = x15
+	POP BC		; BC = x32
+	ADD HL,BC	; x47
+	ADD HL,HL	; x94
+	ADD HL,HL	; x188
+	ADD HL,HL	; x376
+	ADD HL,DE	; x377
+	ADD HL,HL	; x754
+	ADD HL,HL	; x1508
+	ADD HL,DE	; x1509
+	LD DE,$0029	
+	ADD HL,DE	
+	LD (L5B05),HL	; ($5B05) := ($5B05) * 1509 + 41
+	RET	
+
+L9DA4	DEFB $AF
+
+; Fill block at HL with A
+; I: HL = block address, A = value, B = length of the block to fill
+L9DA5	LD (HL),A	
+	INC HL	
+	DJNZ L9DA5	
+	RET
+
+; Prepare the mini-map (LAC5D table)
+L9DAA	LD HL,LAC5D+3*32+2	; $ACBF = $AC5D + 3 * 32 + 2: row 3 column 2
+	LD B,$1C	
+	LD A,$16	
+	CALL L9DA5	; Fill block at $ACBF with $16
+	LD (HL),$06	; ($ACDB) <- $06
+	INC HL		; HL = $ACDC
+	LD B,$22	
+	LD A,$01	
+	CALL L9DA5	; Fill block at $ACDC with $01
+	INC HL		; HL = $ACFF
+	LD A,$1A	
+	LD B,$1C	
+	CALL L9DA5	; Fill block at $ACFF with $1A
+	INC HL	
+	INC HL	
+	LD (HL),$02	
+	LD HL,LAC5D+6*32+31	; $AD3C = $AC5D + 6 * 32 + 31; row 6 column 31
+	LD (HL),$06	; ($AD3C) <- $06
+	INC HL	
+	INC HL	
+	INC HL		; HL = $AD3F
+	LD B,$1C	
+	LD A,$16	
+	CALL L9DA5	; Fill block at $AD3F with $16
+	INC HL	
+	INC HL		; HL = $AD5D; $AD5D = $AC5D + $100: row 8 column 0
+	LD B,$00	
+	LD A,$01	
+	CALL L9DA5	; Fill block at $AD5D with $01, 256 bytes: fill rows 8..15
+	CALL L9DA5	; Fill block at $AE5D with $01, 256 bytes: fill rows 16..23
+	CALL L9DA5	; Fill block at $AF5D with $01, 256 bytes: fill rows 24..31
+	CALL L9D84	; Random
+	LD A,H	
+	AND $0F	
+	ADD A,$07	; A = (Random:H) & 15 + 7 => 7..22
+	LD L,A		; column
+	LD H,$03	; row = 3
+	XOR A	
+	CALL L9D79	; Calc address in AC5D and Set value = 0
+	INC L		; next column; column = 4
+	CALL L9D79	; Calc address in AC5D and Set value = 0
+	LD H,$05	; row = 5
+	CALL L9D79	; Calc address in AC5D and set value = 0
+	DEC L		; previous column; column = 3
+	CALL L9D79	; Calc address in AC5D and Set value = 0
+	DEC H		; previous row; row = 4
+	LD A,$1C	; $1C = place for Octopus, left block
+	CALL L9D79	; Calc address in AC5D and Set value = $1C
+	INC A		; = $1D = place for Octopus, right block
+	INC L		; next column; column = 4
+	CALL L9D79	; Calc address in AC5D and Set value = $1D
+	LD HL,LAC5D+3*32	; $ACBD = $AC5D + 3 * 32: row 3 column 0
+	LD B,$A0	
+L9E14	LD A,(HL)	
+	CP $02	
+	JR Z,L9E2A	
+	CP $06	
+	JR Z,L9E2A	
+	CP $16	
+	JR Z,L9E2A	
+	CP $1A	
+	JR Z,L9E2A	
+L9E25	INC HL	
+	DJNZ L9E14	
+	JR L9E38	
+L9E2A	PUSH BC	
+	PUSH HL	
+	CALL L9D84	; Random
+	BIT 5,H	
+	POP HL	
+	POP BC	
+	JR Z,L9E25	
+	INC (HL)	
+	JR L9E25	
+L9E38	LD A,$02	
+	LD (L5B09),A	
+	CALL L9D84	; Random
+	LD A,H	
+	AND $0F	
+	ADD A,$07	
+	LD L,A	
+	LD H,$07	
+	XOR A	
+	CALL L9D79	; Calc address in AC5D and Set value = 0
+	INC L	
+	CALL L9D79	; Calc address in AC5D and Set value = 0
+	INC H	
+	LD A,$1D	; $1D = place for Octopus, right block
+	CALL L9D79	; Calc address in AC5D and Set value = $1D
+	DEC A		; = $1C = place for Octopus, left block
+	DEC L	
+	CALL L9D79	; Calc address in AC5D and Set value = $1C
+	DEC L	
+	LD (L5B07),HL	
+L9E5F	LD HL,(L5B07)	
+	INC H	
+	LD (L5B07),HL	
+	LD A,(L5B09)	
+	LD (L5B0A),A	
+	LD A,(L5B10)	; Game level 1..4
+	ADD A,A		; *2
+	ADD A,A		; *4
+	ADD A,$10	; *4 + 16
+	LD C,A	
+	DEC C	
+	CP H	
+	JR NZ,L9E99	
+	DEC H	
+	LD A,(L5B09)	
+	LD B,A	
+L9E7D	PUSH HL	
+	PUSH BC	
+	CALL L9D84	; Random
+	LD D,H	
+	POP BC	
+	POP HL	
+	INC L	
+	LD A,$16	
+	BIT 1,D	
+	JR Z,L9E8D	
+	INC A	
+L9E8D	CALL L9D79	; Calc address in AC5D and Set
+	DJNZ L9E7D	
+	CALL LA193	
+	CALL LB1D4	
+	RET	
+L9E99	PUSH HL	
+	PUSH BC	
+	CALL L9D84	; Random
+	POP BC	
+	POP DE	
+	EX DE,HL	
+	LD A,D	
+	AND $07	
+	JR NZ,L9EB3	
+L9EA6	LD A,$02	
+	BIT 6,D	
+	JR Z,L9EAD	
+	INC A	
+L9EAD	CALL L9D79	; Calc address in AC5D and Set
+	JP L9F0E	
+L9EB3	LD A,E	
+	AND $C0	
+	JR NZ,L9EFB	
+L9EB8	BIT 4,E	
+	JR Z,L9ED8	
+	LD A,L	
+	OR A	
+	JR Z,L9EA6	
+	LD A,H	
+	CP C	
+	JR Z,L9ED8	
+	LD A,$05	
+	CALL L9D79	; Calc address in AC5D and Set
+	DEC L	
+	LD (L5B07),HL	
+	INC L	
+	LD A,(L5B0A)	
+	INC A	
+	LD (L5B0A),A	
+	JP L9F0E	
+L9ED8	LD A,(L5B09)	
+	ADD A,L	
+	CP $1E	
+	JR Z,L9EA6	
+	LD A,(L5B0A)	
+	DEC A	
+	JR Z,L9EA6	
+	LD (L5B0A),A	
+	LD A,(L5B09)	
+	DEC A	
+	LD (L5B09),A	
+	INC L	
+	LD (L5B07),HL	
+	LD A,$04	
+	CALL L9D79	; Calc address in AC5D and Set
+	JR L9F0E	
+L9EFB	DEC L	
+	CALL L9D5F	; Check value in AC5D table
+	PUSH AF	
+	INC L	
+	POP AF	
+	JR NZ,L9EB8	
+	LD A,$0B	
+	CALL L9D79	; Calc address in AC5D and Set
+	PUSH BC	
+	CALL L9F81	
+	POP BC	
+L9F0E	LD A,(L5B09)	
+	LD B,A	
+	XOR A	
+L9F13	INC L	
+	CALL L9D79	; Calc address in AC5D and Set
+	DJNZ L9F13	
+	INC L	
+	PUSH HL	
+	PUSH BC	
+	CALL L9D84	; Random
+	POP BC	
+	POP DE	
+	EX DE,HL	
+	LD A,D	
+	AND $07	
+	JR NZ,L9F34	
+L9F27	LD A,$06	
+	BIT 6,D	
+	JR NZ,L9F2E	
+	INC A	
+L9F2E	CALL L9D79	; Calc address in AC5D and Set
+	JP L9F78	
+L9F34	LD A,E	
+	AND $C0	
+	JR NZ,L9F67	
+L9F39	BIT 4,E	
+	JR Z,L9F4F	
+	LD A,(L5B0A)	
+	DEC A	
+	JR Z,L9F4F	
+	LD (L5B0A),A	
+	DEC L	
+	LD A,$08	
+	CALL L9D79	; Calc address in AC5D and Set
+	JP L9F78	
+L9F4F	LD A,L	
+	CP $1E	
+	JR NC,L9F27	
+	LD A,H	
+	CP C	
+	JR Z,L9F27	
+	LD A,$09	
+	CALL L9D79	; Calc address in AC5D and Set
+	LD A,(L5B0A)	
+	INC A	
+	LD (L5B0A),A	
+	JP L9F78	
+L9F67	INC L	
+	CALL L9D5F	; Check value in AC5D table
+	PUSH AF	
+	DEC L	
+	POP AF	
+	JR NZ,L9F39	
+	LD A,$0A	
+	CALL L9D79	; Calc address in AC5D and Set
+	CALL LA03B	
+L9F78	LD A,(L5B0A)	
+	LD (L5B09),A	
+	JP L9E5F
+
+L9F81	LD (L5B01),HL	
+L9F84	DEC L	
+	PUSH HL	
+	CALL L9D84	; Random
+	POP DE	
+	EX DE,HL	
+	LD A,D	
+	AND $02	
+	JR NZ,L9FEB	
+L9F90	DEC L	
+	CALL L9D5F	; Check value in AC5D table
+	JR Z,L9FC0	
+	LD A,L	
+	CP $FF	
+	JR NZ,L9FB6	
+	LD L,$1F	
+	CALL L9D56	; Calc address in AC5D and Get
+	CP $14	
+	JR NZ,L9FB4	
+	LD A,$0B	
+	CALL L9D79	; Calc address in AC5D and Set
+	LD L,$00	
+	LD A,$0A	
+	CALL L9D79	; Calc address in AC5D and Set
+	LD HL,(L5B01)	
+	RET	
+L9FB4	LD L,$FF	
+L9FB6	INC L	
+	LD A,$15	
+	CALL L9D79	; Calc address in AC5D and Set
+	LD HL,(L5B01)	
+	RET	
+L9FC0	INC L	
+	BIT 7,E	
+	JR Z,L9FE0	
+	DEC H	
+	CALL L9D56	; Calc address in AC5D and Get
+	INC H	
+	SUB $10	
+	JR C,L9FE0	
+	CP $04	
+	JR NC,L9FE0	
+	LD A,$18	
+	CALL L9D79	; Calc address in AC5D and Get
+	DEC H	
+	INC A	
+	CALL L9D79	; Calc address in AC5D and Get
+	INC H	
+	JP L9F84	
+L9FE0	LD A,D	
+	AND $03	
+	ADD A,$10	
+	CALL L9D79	; Calc address in AC5D and Get
+	JP L9F84	
+L9FEB	BIT 6,E	
+	JR NZ,LA011	
+	INC H	
+	CALL L9D5F	; Check value in AC5D table
+	JR Z,L9FF8	
+	DEC H	
+	JR L9F90	
+L9FF8	DEC L	
+	CALL L9D5F	; Check value in AC5D table
+	JR Z,LA002	
+	INC L	
+	DEC H	
+	JR L9F90	
+LA002	INC L	
+	LD A,$0D	
+	CALL L9D79	; Calc address in AC5D and Get
+	DEC H	
+	DEC A	
+	CALL L9D79	; Calc address in AC5D and Get
+	INC H	
+	JP L9F84	
+LA011	LD A,$09	
+	CP H	
+	JP Z,L9F90	
+	DEC H	
+	CALL L9D5F	; Check value in AC5D table
+	JR Z,LA021	
+	INC H	
+	JP L9F90	
+LA021	DEC L	
+	CALL L9D5F	; Check value in AC5D table
+	JR Z,LA02C	
+	INC L	
+	INC H	
+	JP L9F90	
+LA02C	LD A,$0E	
+	INC L	
+	CALL L9D79	; Calc address in AC5D and Get
+	INC H	
+	INC A	
+	CALL L9D79	; Calc address in AC5D and Get
+	DEC H	
+	JP L9F84	
+
+LA03B	LD (L5B01),HL	
+LA03E	INC L	
+	PUSH HL	
+	CALL L9D84	; Random
+	POP DE	
+	EX DE,HL	
+	LD A,D	
+	AND $04	
+	JR NZ,LA0A5	
+LA04A	INC L	
+	CALL L9D5F	; Check value in AC5D table
+	JR Z,LA079	
+	LD A,L	
+	AND $1F	
+	JR NZ,LA06F	
+	LD L,A	
+	CALL L9D56	; Calc address in AC5D and Get
+	CP $15	
+	JR NZ,LA06D	
+	LD A,$0A	
+	CALL L9D79	; Calc address in AC5D and Get
+	LD L,$1F	
+	LD A,$0B	
+	CALL L9D79	; Calc address in AC5D and Get
+	LD HL,(L5B01)	
+	RET	
+LA06D	LD L,$20	
+LA06F	DEC L	
+	LD A,$14	
+	CALL L9D79	; Calc address in AC5D and Get
+	LD HL,(L5B01)	
+	RET	
+LA079	DEC L	
+	BIT 7,E	
+	JR Z,LA09A	
+	DEC H	
+	CALL L9D56	; Calc address in AC5D and Get
+	INC H	
+	SUB $10	
+	JR C,LA09A	
+	CP $04	
+	JR NC,LA09A	
+	LD A,$18	
+	CALL L9D79	; Calc address in AC5D and Get
+	DEC H	
+	LD A,$19	
+	CALL L9D79	; Calc address in AC5D and Get
+	INC H	
+	JP LA03E	
+LA09A	LD A,D	
+	AND $03	
+	ADD A,$10	
+	CALL L9D79	; Calc address in AC5D and Get
+	JP LA03E	
+LA0A5	BIT 6,E	
+	JR NZ,LA0CB	
+	INC H	
+	CALL L9D5F	; Check value in AC5D table
+	JR Z,LA0B2	
+	DEC H	
+	JR LA04A	
+LA0B2	INC L	
+	CALL L9D5F	; Check value in AC5D table
+	JR Z,LA0BC	
+	DEC L	
+	DEC H	
+	JR LA04A	
+LA0BC	DEC L	
+	LD A,$0F	
+	CALL L9D79	; Calc address in AC5D and Get
+	DEC H	
+	DEC A	
+	CALL L9D79	; Calc address in AC5D and Get
+	INC H	
+	JP LA03E	
+LA0CB	LD A,$09	
+	CP H	
+	JP Z,LA04A	
+	DEC H	
+	CALL L9D5F	; Check value in AC5D table
+	JR Z,LA0DB	
+	INC H	
+	JP LA04A	
+LA0DB	INC L	
+	CALL L9D5F	; Check value in AC5D table
+	JR Z,LA0E6	
+	INC H	
+	DEC L	
+	JP LA04A	
+LA0E6	LD A,$0C	
+	DEC L	
+	CALL L9D79	; Calc address in AC5D and Get
+	INC H	
+	INC A	
+	CALL L9D79	; Calc address in AC5D and Get
+	DEC H	
+	JP LA03E	
+
+; Calculate address ???
+; I: HL = Char coords: H = row, L = column 0..31
+LA0F5	PUSH HL
+	SRL H
+	SRL H
+	SRL H
+	SRL H
+	RR L
+	SRL H
+	RR L
+	SRL H
+	RR L
+	LD DE,LAC5D	
+	ADD HL,DE	
+	LD H,(HL)	
+	POP DE	
+	LD A,E	
+	AND $07	
+	LD E,A	
+	LD A,D	
+	RRCA	
+	RRCA	
+	RRCA	
+	AND $E0	
+	LD L,A	
+	SRL H	
+	RR L	
+	SRL H	
+	RR L	
+	LD A,L	
+	OR E	
+	LD L,A	
+	LD DE,LA4DD	
+	ADD HL,DE	
+	RET	
+
+; Calculate address and Get ???
+; I: HL = Char coords: H = row, L = column 0..31
+LA129	PUSH HL	
+	PUSH DE	
+	CALL LA0F5	
+	LD A,(HL)	
+	POP DE	
+	POP HL	
+	RET
+
+LA132	DEFB $E5,$D5,$F5,$CD,$F5,$A0,$F1,$5F	
+	DEFB $7E,$E6,$3F,$7B,$D1,$E1,$C9,$E5	
+	DEFB $D5,$F5,$CD,$F5,$A0,$F1,$D1,$BE	
+	DEFB $E1,$C9
+
+; Get screen attribute address
+LA14C	PUSH DE	
+	LD A,L	
+	LD L,$00	
+	SRL H	
+	RR L	
+	SRL H	
+	RR L	
+	SRL H	
+	RR L	
+	OR L	
+	LD L,A	
+	LD DE,$5800	
+	ADD HL,DE	
+	POP DE	
+	RET
+
+; Convert char coords HL to ZX screen address
+; I: HL = Char coords: H = row 0..23, L = column 0..31
+; O: HL	= address on the ZX screen
+LA164	PUSH DE	
+	LD A,H	
+	LD D,A	
+	AND $18	
+	SET 6,A	
+	LD H,A	
+	LD A,D	
+	RRCA	
+	RRCA	
+	RRCA	
+	AND $E0	
+	OR L	
+	LD L,A	
+	POP DE	
+	RET
+
+; Draw tile 16x8 at the screen
+; I: HL = Char coords: H = row 0..23, L = column 0..31
+; I: DE = Tile address; 16 bytes
+LA176	CALL LA164	; Convert char coords HL to ZX screen address
+	LD B,$08	
+LA17B	LD A,(DE)	
+	LD (HL),A	
+	INC DE	
+	INC L	
+	LD A,(DE)	
+	LD (HL),A	
+	DEC L	
+	INC H	
+	INC DE	
+	DJNZ LA17B	
+	RET
+
+; Draw tile 8x8 at the screen
+; I: HL = Char coords: H = row 0..23, L = column 0..31
+; I: DE = Tile address; 8 bytes
+LA187	CALL LA164	; Convert char coords HL to ZX screen address
+	LD B,$08	
+LA18C	LD A,(DE)	
+	LD (HL),A	
+	INC DE	
+	INC H	
+	DJNZ LA18C	
+	RET
+
+LA193	LD HL,$20FF	
+	LD DE,LA27E	
+	XOR A	
+	LD (L5B00),A	
+	LD A,$03	
+	LD (L5B0F),A	
+LA1A2	INC L	
+	LD A,L	
+	AND $1F	
+	JR NZ,LA1B0	
+	LD L,A	
+	DEC H	
+	JR NZ,LA1B0	
+	LD A,$80	
+	LD (DE),A	
+	RET	
+LA1B0	CALL L9D56	; Calc address in AC5D and Get
+	LD C,A	
+	PUSH HL	
+	CP $14	
+	JR Z,LA1CC	
+	CP $15	
+	JR NZ,LA1F6	
+	LD A,L	
+	OR A	
+	JR NZ,LA1F6	
+	LD L,$04	
+	LD A,H	
+	ADD A,A	
+	ADD A,A	
+	ADD A,A	
+	ADD A,$04	
+	LD H,A	
+	JR LA1DA	
+LA1CC	LD A,L	
+	CP $1F	
+	JR NZ,LA1F6	
+	LD L,$FB	
+	LD A,H	
+	ADD A,A	
+	ADD A,A	
+	ADD A,A	
+	ADD A,$06	
+	LD H,A	
+LA1DA	LD A,(L5B0F)	
+	OR A	
+	JR Z,LA1F6	
+	LD A,$40	
+	LD (DE),A	
+	INC DE	
+	LD A,L	
+	LD (DE),A	
+	INC DE	
+	LD A,H	
+	LD (DE),A	
+	INC DE	
+	LD A,(L5B0F)	
+	LD (DE),A	
+	INC DE	
+	DEC A	
+	LD (L5B0F),A	
+	POP HL	
+	JR LA1A2	
+LA1F6	LD H,C	
+	LD L,$C0	
+	SRL H	
+	RR L	
+	SRL H	
+	RR L	
+	LD BC,LA4DD	
+	PUSH HL	
+	ADD HL,BC	
+	POP BC	
+	LD B,$10	
+LA209	LD A,(HL)	
+	INC HL	
+	INC C	
+	SUB $1C	
+	JR C,LA278	
+	CP $04	
+	JR NC,LA278	
+	LD A,(HL)	
+	INC HL	
+	INC C	
+	SUB $1C	
+	JR C,LA278	
+	CP $04	
+	JR NC,LA278	
+	LD A,C	
+	AND $07	
+	JR Z,LA278	
+	PUSH HL	
+	PUSH DE	
+	PUSH BC	
+	CALL L9D84	; Random
+	POP BC	
+	POP DE	
+	LD A,H	
+	POP HL	
+	AND $02	
+	JR NZ,LA278	
+	LD A,(L5B00)	
+	INC A	
+	CP $64	
+	JR Z,LA278	
+	LD (L5B00),A	
+	LD A,$0A	
+	LD (DE),A	
+	EX (SP),HL	
+	LD A,H	
+	CP $04	
+	JR C,LA249	
+	LD A,$00	
+	LD (DE),A	
+LA249	INC DE	
+	LD A,C	
+	DEC A	
+	DEC A	
+	AND $07	
+	PUSH DE	
+	LD D,A	
+	LD A,L	
+	ADD A,A	
+	ADD A,A	
+	ADD A,A	
+	AND $F8	
+	OR D	
+	POP DE	
+	LD (DE),A	
+	INC DE	
+	PUSH DE	
+	LD A,H	
+	ADD A,A	
+	ADD A,A	
+	ADD A,A	
+	AND $F8	
+	LD D,A	
+	LD A,C	
+	AND $38	
+	RRCA	
+	RRCA	
+	RRCA	
+	OR D	
+	POP DE	
+	EX (SP),HL	
+	LD (DE),A	
+	INC DE	
+	LD A,(L5B05)	; get current Random
+	AND $7F	
+	LD (DE),A	
+	INC DE	
+	INC HL	
+	INC C	
+	DEC B	
+LA278	DJNZ LA209	
+	POP HL	
+	JP LA1A2	
+
+LA27E	DEFB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00	
+	DEFB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00	
+	DEFB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00	
+	DEFB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00	
+	DEFB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00	
+	DEFB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00	
+	DEFB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00	
+	DEFB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00	
+	DEFB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00	
+	DEFB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00	
+	DEFB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00	
+	DEFB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00	
+	DEFB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00	
+	DEFB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00	
+	DEFB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00	
+	DEFB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00	
+	DEFB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00	
+	DEFB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00	
+	DEFB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00	
+	DEFB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00	
+	DEFB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00	
+	DEFB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00	
+	DEFB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00	
+	DEFB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00	
+	DEFB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$B2,$1D	
+	DEFB $EA,$53,$DE,$69,$DE,$01,$53,$48,$46,$B5,$7A,$EA,$5E
+
+LA41B	DEFB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00	
+	DEFB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00	
+	DEFB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00	
+	DEFB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00	
+	DEFB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00	
+	DEFB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00	
+	DEFB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00	
+	DEFB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00	
+	DEFB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00	
+	DEFB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00	
+	DEFB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00	
+	DEFB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00	
+	DEFB $00,$00
+
+;----------------------------------------------------------------------------
+
+	INCLUDE "scubarelf.asm"
+
+;----------------------------------------------------------------------------
+
+LB0A9	LD DE,(L5B03)	; get Screen position on mini-map
+	LD A,D	
+	RLCA	
+	RLCA	
+	RLCA	
+	LD D,A	
+	LD A,E	
+	RLCA	
+	RLCA	
+	RLCA	
+	LD E,A	
+	LD (L5B0B),DE	
+	LD HL,LA27E	
+	DI	
+	PUSH IY	
+	LD IY,LB07D	
+LB0C5	BIT 7,(HL)	
+	JR Z,LB0D0	
+	LD (IY+$01),$FF	
+	POP IY	
+	RET	
+LB0D0	PUSH HL	
+	PUSH DE	
+	RES 0,(HL)	
+	INC HL	
+	LD A,(HL)	
+	SUB E	
+	CP $18	
+	JR NC,LB148	
+	LD E,A	
+	INC HL	
+	LD A,(HL)	
+	SUB D	
+	CP $18	
+	JR NC,LB148	
+	LD D,A	
+	PUSH DE	
+	DEC HL	
+	DEC HL	
+	LD (IY+$00),L	
+	LD (IY+$01),H	
+	LD (IY+$02),E	
+	LD (IY+$03),D	
+	INC IY	
+	INC IY	
+	INC IY	
+	INC IY	
+	SET 0,(HL)	
+	LD C,$46	; screen attribute for chest
+	LD DE,LB1B4	; Sprite 16x8 Chest
+	BIT 6,(HL)	; check "chest" bit
+	JR NZ,LB151	
+	LD C,$47	; screen attribute for oxygen
+	LD DE,LB1AC	; Sprite 8x8 Oxygen
+	BIT 5,(HL)	; check "oxygen" bit
+	JR NZ,LB160	
+	LD C,$07	; screen attribute for shells
+	BIT 1,(HL)	; check "big/small" bit
+	JR Z,LB121	
+	LD DE,LB1CC	; Sprite 8x8 Small shell opened
+	BIT 3,(HL)	; check "closed/opened" bit
+	JR Z,LB160	
+	LD DE,LB1C4	; Sprite 8x8 Small shell closed
+	JR LB160	
+LB121	LD DE,LB16C	; Sprite 16x16 Big shell opened
+	BIT 3,(HL)	; check "closed/opened" bit
+	JR Z,LB12B	
+	LD DE,LB18C	; Sprite 16x16 Big shell closed
+LB12B	POP HL	
+	PUSH HL		; save (row, column)
+	CALL LA14C	; Get screen attribute address
+	LD (HL),C	; set screen attribute
+	INC HL	
+	LD (HL),C	; set screen attribute
+	PUSH BC	
+	LD BC,$0020	
+	OR A	
+	SBC HL,BC	; one char line upper
+	POP BC	
+	LD (HL),C	; set screen attribute
+	DEC HL	
+	LD (HL),C	; set screen attribute
+	POP HL		; restore (row, column)
+	PUSH HL	
+	CALL LA176	; Draw tile 16x8 at the screen
+	POP HL		; restore (row, column)
+	DEC H		; One char line upper
+	CALL LA176	; Draw tile 16x8 at the screen
+LB148	POP DE	
+	POP HL	
+	LD BC,$0004	
+	ADD HL,BC	
+	JP LB0C5	
+LB151	LD A,(HL)	
+	POP HL	
+	PUSH HL	
+	CALL LA14C	; Get screen attribute address
+	LD (HL),C	; set screen attribute
+	INC HL	
+	LD (HL),C	; set screen attribute
+	POP HL	
+	CALL LA176	; Draw tile 16x8 at the screen
+	JR LB148	
+LB160	POP HL	
+	PUSH HL	
+	CALL LA14C	; Get screen attribute address
+	LD (HL),C	; set screen attribute
+	POP HL	
+	CALL LA187	; Draw tile 8x8 at the screen
+	JR LB148	
+
+;----------------------------------------------------------------------------
+; Sprites for objects
+
+; Sprite 16x16 Big shell opened; first lower part then upper
+LB16C	DEFB $60,$1C,$60,$0E,$2C,$1E,$36,$1C	; sprB16C
+	DEFB $36,$0C,$16,$C4,$0B,$6C,$05,$B8
+LB17C	DEFB $00,$00,$00,$60,$00,$78,$00,$38	; sprB17C
+	DEFB $00,$3C,$00,$0E,$40,$36,$40,$3B
+
+; Sprite 16x16 Big shell closed; first lower part then upper
+LB18C	DEFB $63,$10,$61,$E0,$2C,$F8,$36,$78	; sprB18C
+	DEFB $36,$1C,$16,$C4,$0B,$6C,$05,$B8
+LB19C	DEFB $00,$00,$00,$00,$00,$00,$0C,$00	; sprB19C
+	DEFB $3F,$00,$0F,$80,$4F,$80,$40,$E0
+
+; Sprite 8x8 Oxygen
+LB1AC	DEFB $30,$10,$7C,$6C,$6C,$6C,$7C,$6C	; sprB1AC
+
+; Sprite 16x8 Chest
+LB1B4	DEFB $0F,$F8,$1F,$FC,$00,$00,$1F,$FC	; sprB1B4
+	DEFB $1F,$7C,$1F,$7C,$1F,$FC,$1F,$FC
+
+; Sprite 8x8 Small shell closed
+LB1C4	DEFB $00,$00,$00,$7C,$FE,$06,$FE,$7C	; sprB1C4
+
+; Sprite 8x8 Small shell opened
+LB1CC	DEFB $02,$03,$03,$03,$03,$03,$FE,$7C	; sprB1CC
+
+;----------------------------------------------------------------------------
+
+LB1D4	PUSH IY	
+	NOP	
+	NOP	
+	NOP	
+	NOP	
+	XOR A	
+	LD (LB210),A	
+LB1DE	LD IY,LA27E	
+LB1E2	CALL L9D84	; Random
+	LD A,H	
+	AND $03	
+	ADD A,$03	
+	LD B,A	
+	LD DE,$0004	
+LB1EE	ADD IY,DE	
+	DJNZ LB1EE	
+	LD A,(IY+$02)	
+	CP $48	
+	JR C,LB1DE	
+	LD A,(IY+$00)	
+	AND $60	
+	JR NZ,LB1E2	
+	LD (IY+$00),$20	
+	LD HL,LB210	
+	INC (HL)	
+	LD A,(HL)	
+	CP $08	
+	JR NZ,LB1E2	
+	POP IY	
+	RET	
+
+LB210	DEFB $00
+LB211	DEFB $08
+LB212	DEFB $05
+
+LB213	CALL LB2C0	; Octopus delay and process
+	LD HL,LB211	
+	DEC (HL)	
+	RET NZ	
+	DI	
+	LD A,(L5B0D)	; get value 7 / 5 / 3 / 1, depending on Game level 1..4
+	LD (HL),A	
+	LD A,(LB212)	
+	BIT 7,A	
+	JR NZ,LB230	
+	INC A	
+	CP $07	
+	JR NZ,LB237	
+	SET 7,A	
+	JR LB237	
+LB230	DEC A	
+	CP $83	
+	JR NZ,LB237	
+	RES 7,A	
+LB237	LD (LB212),A	
+	PUSH IY	
+	LD IY,LB079	
+LB240	LD DE,$0004	
+	LD BC,(L5B0B)	
+LB247	ADD IY,DE	
+	LD L,(IY+$00)	
+	LD H,(IY+$01)	
+	LD A,$FF	
+	CP H	
+	JR NZ,LB257	
+	POP IY	
+	RET	
+LB257	BIT 5,(HL)	
+	JR NZ,LB247	
+	BIT 6,(HL)	
+	JR Z,LB276	
+	BIT 3,(HL)	
+	JR NZ,LB247	
+	LD L,(IY+$02)	
+	LD H,(IY+$03)	
+	CALL LA14C	; Get screen attribute address
+	LD A,(LB212)	
+	AND $07	
+	LD (HL),A	
+	INC HL	
+	LD (HL),A	
+	JR LB240	
+LB276	BIT 3,(HL)	
+	JR Z,LB27E	
+	BIT 4,(HL)	
+	JR NZ,LB247	
+LB27E	ADD HL,DE	
+	DEC HL	
+	DEC (HL)	
+	JR Z,LB286	
+	INC HL	
+	JR LB247	
+LB286	PUSH HL	
+	PUSH DE	
+	PUSH BC	
+	CALL L9D84	; Random
+	POP BC	
+	POP DE	
+	LD A,H	
+	POP HL	
+	AND $7F	
+	ADD A,$80	
+	LD (HL),A	
+	DEC HL	
+	LD A,(HL)	
+	SUB B	
+	LD D,A	
+	DEC HL	
+	LD A,(HL)	
+	SUB C	
+	LD E,A	
+	DEC HL	
+	LD A,$08	
+	XOR (HL)	
+	LD (HL),A	
+	BIT 1,(HL)	
+	PUSH HL	
+	EX DE,HL	
+	JR Z,LB2B1	
+	LD DE,LB2EE	; sprite 8x8 address, 8 bytes
+	CALL LB2CE	; Draw tile 8x8 with XOR
+	POP HL	
+	JR LB240	
+LB2B1	LD DE,LB2F6	; sprite 16x16 address, 32 bytes
+	PUSH HL	
+	CALL LB2DB	; Draw tile 16x8 with XOR
+	POP HL	
+	DEC H		; one line upper
+	CALL LB2DB	; Draw tile 16x8 with XOR
+	POP HL	
+	JR LB240	
+
+; Octopus delay and process
+LB2C0	LD HL,LB2CD	
+	DEC (HL)	
+	RET NZ	
+	LD A,(L5B0E)	; get value 10 / 8 / 6 / 4, depending on Game level 1..4
+	LD (HL),A	
+	CALL LB317	; Process Octopus, draw if needed
+	RET	
+LB2CD	DEFB $08
+
+; Draw tile 8x8 with XOR
+; I: HL = Char coords: H = 0..23, L = 0..31
+; I: DE = Tile address
+LB2CE	CALL LA164	; Convert char coords HL to ZX screen address
+	LD B,$08	; tile height 8 pixels
+LB2D3	LD A,(DE)	
+	XOR (HL)	
+	LD (HL),A	
+	INC DE	
+	INC H	
+	DJNZ LB2D3	
+	RET
+
+; Draw tile 16x8 with XOR
+; I: HL = Char coords: H = 0..23, L = 0..31
+; I: DE = Tile address
+LB2DB	CALL LA164	; Convert char coords HL to ZX screen address
+	LD B,$08	; tile height 8 pixels
+LB2E0	LD A,(DE)	
+	XOR (HL)	
+	LD (HL),A	
+	INC DE	
+	INC L	
+	LD A,(DE)	
+	XOR (HL)	
+	LD (HL),A	
+	DEC L	
+	INC H	
+	INC DE	
+	DJNZ LB2E0	
+	RET	
+
+; Sprite 8x8 address, 8 bytes
+LB2EE	DEFB $02,$03,$03,$7F,$FD,$05,$00,$00
+
+; Sprite 16x16, 32 bytes; first lower part then upper
+LB2F6	DEFB $03,$0C,$01,$EE,$00,$E6,$00,$64	; sprB2F6
+	DEFB $00,$10,$00,$00,$00,$00,$00,$00
+LB306	DEFB $00,$00,$00,$60,$00,$78,$0C,$38	; sprB306
+	DEFB $3F,$3C,$0F,$8E,$0F,$B6,$00,$DB
+; Data block at B316
+LB316	DEFB $09	
+
+; Process Octopus, draw if needed
+LB317	LD A,(L9C50)	
+	OR A	
+	RET Z	
+	LD HL,LB316	
+	DEC (HL)	
+	RET NZ	
+	LD (HL),$10	
+	LD A,(L9C55)	
+	LD B,A	
+	BIT 7,A	
+	JR NZ,LB339	
+	LD A,R	
+	JR Z,LB345	
+	INC B	
+	LD A,$05	
+	CP B	
+	JR NZ,LB345	
+	LD B,$83	
+	JR LB345	
+LB339	LD A,R	
+	JR Z,LB345	
+	DEC B	
+	LD A,$7F	
+	CP B	
+	JR NZ,LB345	
+	LD B,$01	
+LB345	LD A,B
+;
+LB346	LD (L9C55),A	
+	LD HL,L8D74	; Base address for Octopus phases
+	AND $07	
+	LD B,A	
+	OR A	
+	JR Z,LB358	
+	LD DE,$00C0	
+LB355	ADD HL,DE	
+	DJNZ LB355	
+LB358	EX DE,HL	
+	CALL LB35D	; Draw Octopus sprite
+	RET	
+
+; Draw Octopus sprite
+; I: DE = Octopus sprite address, 6x4 tiles 8x8 pixels, 192 bytes
+LB35D	DI	
+	PUSH IY	
+	LD IY,(L9C53)	
+	LD (L9C53),DE	
+	LD HL,(L9C51)	; get Octopus row/column
+	INC HL	
+	INC HL	
+	LD C,$04	
+LB36F	LD B,$06	
+	PUSH HL	
+LB372	PUSH BC	
+	LD B,$08	
+	PUSH HL	
+LB376	LD A,(DE)	
+	XOR (HL)	
+	XOR (IY+$00)	
+	LD (HL),A	
+	INC DE	
+	INC IY	
+	INC H	
+	DJNZ LB376	
+	POP HL	
+	INC L	
+	POP BC	
+	DJNZ LB372	
+	POP HL	
+	LD A,L	
+	ADD A,$20	
+	LD L,A	
+	DEC C	
+	JR NZ,LB36F	
+	POP IY	
+	RET
+
+LB392	DEFB $00,$00,$00,$00,$00,$00,$00,$00	
+	DEFB $32,$32,$32,$1D,$02,$32
+
+; I: IX = object address = LE33B
+LB3A0	BIT 4,(IX+$0D)	
+	JR Z,LB3AB
+;
+LB3A6	LD HL,(LB7B9)	
+	JR LB3B1
+;
+LB3AB	LD H,(IX+$08)	
+	LD L,(IX+$07)	
+LB3B1	LD C,(IY+$0A)	
+	LD A,(IX+$03)	
+	OR A	
+	JR NZ,LB3D6	
+	SET 6,(IX+$0D)	
+	BIT 3,(IX+$0D)	
+	JR Z,LB3CE	
+	BIT 7,(IX+$12)	
+	JR NZ,LB3E9	
+	LD A,$08	
+	JR LB3D6	
+LB3CE	BIT 7,(IX+$12)	
+	JR Z,LB3E9	
+	LD A,$08	
+LB3D6	LD B,A	
+	XOR A	
+LB3D8	ADD A,(IY+$07)	
+	DJNZ LB3D8	
+	LD B,A	
+	LD C,A	
+	LD A,(IY+$0A)	
+	SUB C	
+	LD C,A	
+	XOR A	
+LB3E5	LD (HL),A	
+	INC HL	
+	DJNZ LB3E5	
+LB3E9	PUSH HL	
+	LD D,(IX+$0C)	
+	LD E,(IX+$0B)	
+	LD A,(DE)	
+	INC A	
+	JR NZ,LB3FA	
+	LD D,(IX+$0A)	
+	LD E,(IX+$09)	
+LB3FA	LD (L5B11),DE	
+	LD B,(IY+$0B)	
+LB401	PUSH BC	
+	LD C,(IY+$06)	
+	LD B,$00	
+	EX DE,HL	
+	LDIR	
+	EX DE,HL	
+	LD (HL),$00	
+	INC HL	
+	POP BC	
+	DJNZ LB401	
+	LD B,C	
+	LD A,B	
+	OR A	
+	JR Z,LB41B	
+	XOR A	
+LB417	LD (HL),A	
+	INC HL	
+	DJNZ LB417	
+LB41B	LD (IX+$0C),D	
+	LD (IX+$0B),E	
+	LD B,(IX+$02)	
+	LD A,B	
+	OR A	
+	JR NZ,LB446	
+	SET 5,(IX+$0D)	
+	BIT 4,(IX+$0D)	
+	JR Z,LB43E	
+	BIT 7,(IX+$11)	
+	JR Z,LB43A	
+LB438	POP HL	
+	RET	
+LB43A	LD B,$08	
+	JR LB446	
+LB43E	BIT 7,(IX+$11)	
+	JR NZ,LB43A	
+	JR LB438	
+LB446	LD A,B	
+	CP $04	
+	JR C,LB45C	
+	SUB $04	
+	LD C,A	
+	LD B,(IY+$0D)	
+	POP HL	
+	PUSH HL	
+	XOR A	
+LB454	RRD	
+	INC HL	
+	DJNZ LB454	
+	LD B,C	
+	JR LB446	
+LB45C	OR A	
+	JR Z,LB438	
+LB45F	POP HL	
+	PUSH HL	
+	PUSH BC	
+	LD B,(IY+$0D)	
+	OR A	
+LB466	RR (HL)	
+	INC HL	
+	DJNZ LB466	
+	POP BC	
+	DJNZ LB45F	
+	POP HL	
+	RET
+
+LB470	BIT 0,(IX+$0D)	
+	JR Z,LB479	
+	CALL LB3A0	
+LB479	LD D,(IX+$08)	
+	LD E,(IX+$07)	
+	BIT 1,(IX+$0D)	
+	JR NZ,LB496	
+	PUSH DE	
+	LD C,(IY+$09)	
+	LD L,(IY+$0A)	
+	XOR A	
+LB48D	LD B,L	
+LB48E	LD (DE),A	
+	INC DE	
+	DJNZ LB48E	
+	DEC C	
+	JR NZ,LB48D	
+	POP DE	
+LB496	LD HL,(LB7B9)	
+	BIT 0,(IX+$0D)	
+	JR NZ,LB4A2	
+	LD HL,$A41B	
+LB4A2	LD B,(IY+$07)	
+LB4A5	LD A,(IY+$02)	
+	AND $E0	
+	JR Z,LB4B4	
+	INC (IY+$02)	
+	INC DE	
+	INC HL	
+	DEC B	
+	JR LB4A5	
+LB4B4	LD A,(IY+$06)	
+	ADD A,(IY+$02)	
+	LD C,A	
+LB4BB	CP $18	
+	JR C,LB4C4	
+	DEC C	
+	DEC B	
+	LD A,C	
+	JR LB4BB	
+LB4C4	LD (IY+$0E),B	
+	LD A,(IY+$07)	
+	SUB B	
+	LD (IY+$0F),A	
+	PUSH IX	
+	PUSH HL	
+	POP IX	
+	LD B,(IY+$09)	
+LB4D6	PUSH BC	
+LB4D7	LD A,(IY+$03)	
+	CP $18	
+	JR C,LB4F0	
+	INC (IY+$03)	
+	POP BC	
+	DEC B	
+	PUSH BC	
+	LD L,(IY+$0A)	
+	LD H,$00	
+	EX DE,HL	
+	ADD HL,DE	
+	ADD IX,DE	
+	EX DE,HL	
+	JR LB4D7	
+LB4F0	LD L,(IY+$02)	
+	LD H,(IY+$03)	
+	CALL LA164	; Convert char coords HL to ZX screen address
+	LD B,$08	
+LB4FB	PUSH BC	
+	PUSH HL	
+	LD B,(IY+$0E)	
+LB500	LD A,(DE)	
+	XOR (HL)	
+	LD (IY+$07),A	
+	CPL	
+	AND (IX+$00)	
+	LD (DE),A	
+	LD A,(IX+$00)	
+	OR (IY+$07)	
+	LD (HL),A	
+	INC L	
+	INC DE	
+	INC IX	
+	DJNZ LB500	
+	LD A,(IY+$06)	
+	INC A	
+	LD (IY+$07),A	
+	LD L,(IY+$0F)	
+	LD H,$00	
+	EX DE,HL	
+	ADD HL,DE	
+	ADD IX,DE	
+	EX DE,HL	
+	POP HL	
+	INC H	
+	POP BC	
+	DJNZ LB4FB	
+	POP BC	
+	INC (IY+$03)	
+	LD A,(IY+$03)	
+	CP $18	
+	JR NC,LB53A	
+	DJNZ LB4D6	
+LB53A	POP IX	
+	BIT 5,(IX+$0D)	
+	JR NZ,LB547	
+	BIT 6,(IX+$0D)	
+	RET Z	
+LB547	LD H,(IX+$08)	
+	LD L,(IX+$07)	
+	LD A,(IX+$02)	
+	OR A	
+	JR NZ,LB5A4	
+	BIT 7,(IX+$11)	
+	JR NZ,LB57E	
+	PUSH HL	
+	POP DE	
+	INC HL	
+	LD B,(IY+$09)	
+	CALL LB572	; Copy records forward
+	DEC DE	
+	XOR A	
+	LD (DE),A	
+;
+LB565	LD A,(IX+$03)	
+	OR A	
+	RET NZ	
+	LD H,(IX+$08)	
+	LD L,(IX+$07)	
+	JR LB5A4
+
+; Copy records forward
+; I: HL = source address, DE = destination address
+; I: IY = ??? (IY+$0A) is record size
+; I:B = number of records to copy
+LB572	PUSH BC	
+	LD C,(IY+$0A)	
+	LD B,$00	
+	LDIR	
+	POP BC	
+	DJNZ LB572	
+	RET	
+
+LB57E	LD E,(IY+$0A)	; get record size
+	LD D,$00	
+	LD B,(IY+$09)	
+LB586	ADD HL,DE	
+	DJNZ LB586	
+	DEC HL	
+	LD D,H	
+	LD E,L	
+	DEC HL	
+	LD B,(IY+$09)	
+	CALL LB598	; Copy records backward
+	INC DE	
+	XOR A	
+	LD (DE),A	
+	JR LB565
+
+; Copy records backward
+; I: HL = source address, DE = destination address
+; I: IY = ??? (IY+$0A) is record size
+; I: B = number of records to copy
+LB598	PUSH BC	
+	LD C,(IY+$0A)	
+	LD B,$00	
+	LDDR	
+	POP BC	
+	DJNZ LB598	
+	RET
+
+LB5A4	BIT 7,(IX+$12)	
+	JR NZ,LB5C1	
+	PUSH HL	
+	LD E,(IY+$0A)	
+	LD D,$00	
+	ADD HL,DE	
+	POP DE	
+	LD B,(IY+$08)	
+	CALL LB572	; Copy records forward
+	LD B,(IY+$0A)	
+	XOR A	
+LB5BC	LD (DE),A	
+	INC DE	
+	DJNZ LB5BC	
+	RET	
+LB5C1	LD E,(IY+$0A)	
+	LD D,$00	
+	LD B,(IY+$08)	
+LB5C9	ADD HL,DE	
+	DJNZ LB5C9	
+	DEC HL	
+	PUSH HL	
+	ADD HL,DE	
+	POP DE	
+	EX DE,HL	
+	LD B,(IY+$08)	
+	CALL LB598	; Copy records backward
+	LD B,(IY+$0A)	
+	XOR A	
+LB5DB	LD (DE),A	
+	DEC DE	
+	DJNZ LB5DB	
+	RET	
+
+LB5E0	RES 1,(IX+$0D)	
+	BIT 0,(IX+$0D)	
+	JR Z,LB5EE	
+	SET 1,(IX+$0D)	
+LB5EE	RES 0,(IX+$0D)	
+	LD HL,(L5B0B)	
+	LD A,(IX+$00)	
+	SUB L	
+	LD C,A	
+	CP $18	
+	JR C,LB60A	
+	ADD A,(IY+$06)	
+	CP $18	
+	LD A,C	
+	JR C,LB60A	
+	SET 0,(IX+$0D)	
+LB60A	LD (IY+$02),A	
+	LD (IY+$00),A	
+	LD A,(IX+$01)	
+	SUB H	
+	CP $18	
+	LD C,A	
+	JR C,LB62D	
+	ADD A,(IY+$08)	
+	CP $18	
+	LD A,C	
+	JR C,LB62D	
+	LD (IY+$01),A	
+	RES 0,(IX+$0D)	
+	LD A,(IX+$0D)	
+	JR LB65F	
+LB62D	LD (IY+$03),A	
+	LD (IY+$01),A	
+	LD A,(IX+$0D)	
+	XOR $01	
+	LD (IX+$0D),A	
+	BIT 0,A	
+	JR Z,LB65F	
+	BIT 1,A	
+	RET NZ	
+	LD HL,LB676	
+	XOR A	
+LB646	BIT 7,(HL)	
+	JR Z,LB655	
+	INC HL	
+	INC A	
+	BIT 4,A	
+	JR Z,LB646	
+	SET 7,(IX+$0D)	
+	RET	
+LB655	AND $0F	
+	OR $F0	
+	LD (IX+$08),A	
+	SET 7,(HL)	
+	RET	
+LB65F	BIT 1,A	
+	RET Z	
+	BIT 7,(IX+$0D)	
+	RET NZ	
+	LD A,(IX+$08)	
+	AND $0F	
+	LD HL,LB676	
+	LD E,A	
+	LD D,$00	
+	ADD HL,DE	
+	RES 7,(HL)	
+	RET
+
+LB676	DEFS $10
+
+LB686	BIT 5,(IX+$0D)	
+	JR Z,LB6D6	
+	LD L,(IY+$00)	
+	LD H,(IY+$01)	
+	LD A,$06	
+	XOR (IX+$04)	
+	LD C,A	
+	BIT 7,(IX+$11)	
+	JR NZ,LB6A6	
+	INC (IX+$00)	
+	INC (IY+$00)	
+	JR LB6B1	
+LB6A6	DEC (IX+$00)	
+	DEC (IY+$00)	
+	LD A,L	
+	ADD A,(IY+$06)	
+	LD L,A	
+LB6B1	LD B,(IY+$09)	
+LB6B4	LD A,H	
+	AND $E0	
+	JR NZ,LB6D3	
+	LD A,H	
+	CP $18	
+	JR NC,LB6D3	
+	LD A,L	
+	AND $E0	
+	JR NZ,LB6D3	
+	LD A,L	
+	CP $18	
+	JR NC,LB6D3	
+	PUSH HL	
+	CALL LA14C	; Get screen attribute address
+	LD A,C	
+	CP (HL)	
+	JR NZ,LB6D2	
+	LD (HL),$06	
+LB6D2	POP HL	
+LB6D3	INC H	
+	DJNZ LB6B4	
+LB6D6	BIT 6,(IX+$0D)	
+	JR Z,LB704	
+	LD L,(IY+$00)	
+	LD H,(IY+$01)	
+	LD A,$06	
+	XOR (IX+$04)	
+	LD C,A	
+	BIT 7,(IX+$12)	
+	JR NZ,LB6F6	
+	INC (IY+$01)	
+	INC (IX+$01)	
+	JR LB701	
+LB6F6	DEC (IY+$01)	
+	DEC (IX+$01)	
+	LD A,H	
+	ADD A,(IY+$08)	
+	LD H,A	
+LB701	CALL LB70F	
+LB704	LD L,(IY+$00)	
+	LD H,(IY+$01)	
+	LD C,$06	
+	JP LB875	
+
+LB70F	LD A,H	
+	AND $E0	
+	RET NZ	
+	LD A,H	
+	CP $18	
+	RET NC	
+	PUSH HL	
+	LD B,(IY+$07)	
+LB71B	LD A,L	
+	AND $E0	
+	JR NZ,LB732	
+	LD A,L	
+	CP $18	
+	JR NC,LB732	
+	PUSH HL	
+	CALL LA14C	; Get screen attribute address
+	LD A,(HL)	
+	CP C	
+	JR NZ,LB731	
+	XOR (IX+$04)	
+	LD (HL),A	
+LB731	POP HL	
+LB732	INC L	
+	DJNZ LB71B	
+	POP HL	
+	RET
+
+LB737	LD D,(IX+$14)	
+	LD E,(IX+$13)	
+	PUSH DE	
+	POP IY	
+	LD A,(IX+$0E)	
+	LD (IX+$0F),A	
+	RES 5,(IX+$0D)	
+	RES 6,(IX+$0D)	
+	LD A,(IX+$02)	
+	ADD A,(IX+$11)	
+	AND $07	
+	LD (IX+$02),A	
+	LD A,(IX+$03)	
+	ADD A,(IX+$12)	
+	AND $07	
+	LD (IX+$03),A	
+	CALL LB5E0	
+	BIT 0,(IX+$0D)	
+	JR Z,$B77B	
+	BIT 7,(IX+$0D)	
+	JR NZ,LB79E	
+	CALL LB470	
+	CALL LB686	
+	JR LB79E	
+LB77B	LD A,(IX+$02)	
+	RES 7,(IX+$0D)	
+	OR A	
+	JR NZ,LB789	
+	SET 5,(IX+$0D)	
+LB789	LD A,(IX+$03)	
+	OR A	
+	JR NZ,LB793	
+	SET 6,(IX+$0D)	
+LB793	LD A,(IX+$0D)	
+	AND $60	
+	JR Z,LB79E	
+	CALL LB686	
+	RET	
+LB79E	LD A,(IX+$02)	
+	BIT 2,(IX+$0D)	
+	JR Z,LB7AA	
+	LD A,(IX+$03)	
+LB7AA	CP $04	
+	RET NZ	
+	LD HL,LB7B8	; address of the return point - put on the stack
+	PUSH HL
+	LD H,(IX+$06)	
+	LD L,(IX+$05)	
+	JP (HL)	
+; Point of return
+LB7B8	RET
+
+LB7B9	DEFS $02
+
+LB7BB	LD A,(IX+$0D)	
+	AND $9E	
+	LD (IX+$0D),A	
+	LD E,(IX+$13)	
+	LD D,(IX+$14)	
+	PUSH DE	
+	POP IY	
+	LD A,(IX+$02)	
+	ADD A,(IX+$11)	
+	AND $07	
+	LD (IX+$02),A	
+	LD A,(IX+$03)	
+	ADD A,(IX+$12)	
+	AND $07	
+	LD (IX+$03),A	
+	CALL LB5E0	
+	BIT 0,(IX+$0D)	
+	JR Z,LB7F9	
+	BIT 7,(IX+$0D)	
+	JR NZ,LB81C	
+	CALL LB470	
+	CALL LB837	
+	JR LB81C	
+LB7F9	LD A,(IX+$02)	
+	RES 7,(IX+$0D)	
+	OR A	
+	JR NZ,LB807	
+	SET 5,(IX+$0D)	
+LB807	LD A,(IX+$03)	
+	OR A	
+	JR NZ,LB811	
+	SET 6,(IX+$0D)	
+LB811	LD A,(IX+$0D)	
+	AND $60	
+	JR Z,LB81C	
+	CALL LB686	
+	RET	
+LB81C	LD A,(IX+$02)	
+	BIT 2,(IX+$0D)	
+	JR Z,LB828	
+	LD A,(IX+$03)	
+LB828	CP $04	
+	RET NZ	
+	LD HL,LB836	
+	PUSH HL	
+	LD H,(IX+$06)	
+	LD L,(IX+$05)	
+	JP (HL)	
+; Point of return
+LB836	RET	
+
+LB837	LD A,$06	
+	BIT 0,(IX+$0D)	
+	JR NZ,LB842	
+	XOR (IX+$04)	
+LB842	LD C,A	
+	LD L,(IY+$00)	
+	LD H,(IY+$01)	
+	LD A,(IX+$02)	
+	OR A	
+	JR NZ,LB85F	
+	BIT 7,(IX+$11)	
+	JR NZ,LB85B	
+	INC (IX+$00)	
+	INC L	
+	JR LB85F	
+LB85B	DEC (IX+$00)	
+	DEC L	
+LB85F	LD A,(IX+$03)	
+	OR A	
+	JR NZ,LB875	
+	BIT 7,(IX+$12)	
+	JR NZ,LB871	
+	INC (IX+$01)	
+	INC H	
+	JR LB875	
+LB871	DEC (IX+$01)	
+	DEC H	
+;
+LB875	LD A,(IY+$09)	
+	LD (IY+$0E),A	
+LB87B	CALL LB70F	
+	INC H	
+	DEC (IY+$0E)	
+	JR NZ,LB87B	
+	RET
+
+LB885	BIT 0,(IX+$10)	; check "moving" bit
+	JP NZ,LB941	
+	BIT 7,(IX+$11)	
+	LD A,(IX+$00)	
+	JR NZ,LB89C	
+	INC A	
+	INC A	
+	ADD A,(IY+$07)	
+	JR LB89F	
+LB89C	DEC A	
+	DEC A	
+	DEC A	
+LB89F	LD L,A	
+	LD H,(IX+$01)	
+	CALL LA129	
+	OR A	
+	JR NZ,LB903	
+	INC H	
+	CALL LA129	
+	OR A	
+	JR NZ,LB903	
+	BIT 0,(IX+$0D)	
+	JR Z,LB8D7	
+	BIT 7,(IX+$0D)	
+	JR NZ,LB8D7	
+	LD DE,(L5B0B)	
+	LD A,H	
+	SUB D	
+	CP $18	
+	JR NC,LB8D7	
+	LD D,A	
+	LD A,L	
+	SUB E	
+	CP $18	
+	JR NC,LB8D7	
+	LD L,A	
+	LD H,D	
+	CALL LA14C	; Get screen attribute address
+	LD A,(HL)	
+	CP $06	
+	JR NZ,LB903	
+LB8D7	LD A,R	
+	JR Z,LB903	
+	LD C,A	
+	AND $40	
+	JR Z,LB8E5	
+LB8E0	LD (IX+$12),$00	
+	RET	
+LB8E5	BIT 2,C	
+	JR Z,LB8F6	
+	LD A,(IX+$01)	
+	CP (IX+$15)	
+	JR NC,LB8E0	
+	LD (IX+$12),$01	
+	RET	
+LB8F6	LD A,(IX+$16)	
+	CP (IX+$01)	
+	JR NC,LB8E0	
+	LD (IX+$12),$FF	
+	RET	
+LB903	BIT 7,(IX+$11)	
+	JR Z,LB917	
+	LD A,(IX+$17)	
+	LD (IX+$18),A	
+	LD L,(IY+$16)	
+	LD H,(IY+$17)	
+	JR LB924	
+LB917	XOR A	
+	SUB (IX+$17)	
+	LD (IX+$18),A	
+	LD L,(IY+$14)	
+	LD H,(IY+$15)	
+LB924	LD (IX+$0B),L	
+	LD (IX+$0C),H	
+	LD (IX+$11),$00	
+	LD (IX+$12),$00	
+	SET 0,(IX+$10)	; set "moving" bit
+	LD A,(IY+$0C)	
+	LD (IX+$19),A	
+	SLA (IX+$0E)	
+	RET	
+LB941	DEC (IX+$19)	
+	RET NZ	
+	LD A,(IX+$18)	
+	LD (IX+$11),A	
+	BIT 7,A	
+	JR Z,LB957	
+	LD L,(IY+$10)	
+	LD H,(IY+$11)	
+	JR LB95D	
+LB957	LD L,(IY+$12)	
+	LD H,(IY+$13)	
+LB95D	LD (IX+$09),L	; set sprite address
+	LD (IX+$0A),H
+	LD (IX+$0B),L	; set sprite address
+	LD (IX+$0C),H
+	RES 0,(IX+$10)	; clear "moving" bit
+	SRL (IX+$0E)	
+	RET	
+
+LB972	BIT 0,(IX+$10)	; check "moving" bit
+	JP NZ,LBA33	
+	BIT 7,(IX+$12)	
+	LD A,(IX+$01)	
+	JR NZ,LB988	
+	ADD A,(IY+$09)	
+	INC A	
+	JR LB98A	
+LB988	DEC A	
+	DEC A	
+LB98A	LD H,A	
+	LD L,(IX+$00)	
+	CALL LA129	
+	OR A	
+	JR NZ,LB9F9	
+	LD A,L	
+	ADD A,(IY+$06)	
+	LD L,A	
+	CALL LA129	
+	OR A	
+	JR NZ,LB9F9	
+	BIT 0,(IX+$0D)	
+	JR Z,LB9C7	
+	BIT 7,(IX+$0D)	
+	JR NZ,LB9C7	
+	LD DE,($5B0B)	
+	LD A,H	
+	SUB D	
+	CP $18	
+	JR NC,LB9C7	
+	LD D,A	
+	LD A,L	
+	DEC A	
+	SUB E	
+	CP $18	
+	JR NC,LB9C7	
+	LD L,A	
+	LD H,D	
+	CALL LA14C	; Get screen attribute address
+	LD A,(HL)	
+	CP $06	
+	JR NZ,LB9F9	
+LB9C7	LD A,R	
+	JR Z,LB9F9	
+	BIT 6,A	
+	JR Z,LB9D4	
+LB9CF	LD (IX+$11),$00	
+	RET	
+LB9D4	BIT 2,A	
+	LD C,$01	
+	JR Z,LB9E3	
+	LD C,$FF	
+	LD A,L	
+	SUB (IY+$06)	
+	SUB $02	
+	LD L,A	
+LB9E3	INC L	
+	CALL LA129	
+	OR A	
+	JR NZ,LB9CF	
+	LD A,H	
+	ADD A,(IY+$08)	
+	LD H,A	
+	CALL LA129	
+	OR A	
+	JR NZ,LB9CF	
+	LD (IX+$11),C	
+	RET	
+LB9F9	BIT 7,(IX+$12)	
+	JR Z,LBA0A	
+	LD A,(IX+$17)	
+	LD L,(IY+$14)	
+	LD H,(IY+$15)	
+	JR LBA14	
+LBA0A	XOR A	
+	SUB (IX+$17)	
+	LD L,(IY+$16)	
+	LD H,(IY+$17)	
+LBA14	LD (IX+$18),A	
+	LD (IX+$0B),L	
+	LD (IX+$0C),H	
+	XOR A	
+	LD (IX+$11),A	
+	LD (IX+$12),A	
+	SET 0,(IX+$10)	; set "moving" bit
+	LD A,(IY+$0C)	
+	LD (IX+$19),A	
+	SLA (IX+$0E)	
+	RET	
+LBA33	DEC (IX+$19)	
+	RET NZ	
+	LD A,(IX+$18)	
+	LD (IX+$12),A	
+	BIT 7,A	
+	JR Z,LBA49	
+	LD L,(IY+$12)	
+	LD H,(IY+$13)	
+	JR LBA4F	
+LBA49	LD L,(IY+$10)	
+	LD H,(IY+$11)	
+LBA4F	LD (IX+$09),L	
+	LD (IX+$0A),H	
+	LD (IX+$0B),L	
+	LD (IX+$0C),H	
+	RES 0,(IX+$10)	; clear "moving" bit
+	SRL (IX+$0E)	
+	RET	
+
+LBA64	BIT 0,(IX+$10)	; check "moving" bit
+	JP NZ,LBC8F	
+	SET 5,(IX+$10)	
+	BIT 2,(IX+$0D)	
+	LD L,(IX+$00)	
+	LD H,(IX+$01)	
+	JP NZ,LBB94	
+	BIT 7,(IX+$11)	
+	JR NZ,LBA8F	
+	LD A,L	
+	ADD A,(IY+$07)	
+	LD L,A	
+	LD D,(IY+$15)	
+	LD E,(IY+$14)	
+	JR LBA96	
+LBA8F	DEC L	
+	LD D,(IY+$17)	; Get screen attribute address
+	LD E,(IY+$16)	
+LBA96	CALL LA129	
+	OR A	
+	JR NZ,LBADE	
+	LD A,H	
+	ADD A,(IY+$08)	
+	LD H,A	
+	CALL LA129	
+	OR A	
+	JR NZ,LBADE	
+	LD A,R	
+	JR Z,LBADE	
+	BIT 6,A	
+	JR NZ,LBAB4	
+LBAAF	LD (IX+$12),$00	
+	RET	
+LBAB4	LD H,(IX+$01)	
+	LD L,(IX+$00)	
+	DEC H	
+	LD C,$FF	
+	BIT 2,A	
+	JR Z,LBAC9	
+	LD C,$01	
+	LD A,H	
+	ADD A,(IY+$09)	
+	LD H,A	
+	INC H	
+LBAC9	CALL LA129	
+	OR A	
+	JR NZ,LBAAF	
+	LD A,L	
+	ADD A,(IY+$06)	
+	LD L,A	
+	CALL LA129	
+	OR A	
+	JR NZ,LBAAF	
+	LD (IX+$12),C	
+	RET	
+LBADE	LD (IX+$0B),E	
+	LD (IX+$0C),D	
+	SET 0,(IX+$10)	; set "moving" bit
+	RES 7,(IX+$10)	
+	SLA (IX+$0E)	
+	LD L,(IX+$00)	
+	LD H,(IX+$01)	
+	BIT 7,(IX+$11)	
+	JR NZ,LBB04	
+	LD A,L	
+	ADD A,(IY+$06)	
+	SUB (IY+$08)	
+	LD L,A	
+LBB04	LD A,R	
+	JR Z,LBB32	
+	LD A,H	
+	CP $4A	
+	JR C,LBB32	
+	ADD A,(IY+$08)	
+	SUB (IY+$07)	
+	LD H,A	
+	CALL LA129	
+	OR A	
+	JR NZ,LBB32	
+	LD A,L	
+	LD C,L	
+	ADD A,(IY+$08)	
+	LD L,A	
+	CALL LA129	
+	OR A	
+	LD L,C	
+	JR NZ,LBB32	
+	SET 6,(IX+$10)	
+	XOR A	
+	SUB (IX+$17)	
+	INC H	
+	JR LBB5E	
+LBB32	LD A,R	
+	JR Z,LBB75	
+	LD A,(IX+$01)	
+	CP $FA	
+	JR NC,LBB75	
+	ADD A,(IY+$07)	
+	LD H,A	
+	CALL LA129	
+	OR A	
+	JR NZ,LBB75	
+	LD C,L	
+	LD A,L	
+	ADD A,(IY+$08)	
+	LD L,A	
+	CALL LA129	
+	OR A	
+	LD L,C	
+	JR NZ,LBB75	
+	SET 6,(IX+$10)	
+	LD A,(IX+$17)	
+	LD H,(IX+$01)	
+LBB5E	LD (IX+$18),A	
+	XOR A	
+	LD (IX+$12),A	
+	LD (IX+$11),A	
+	LD (IX+$1A),L	
+	LD (IX+$1B),H	
+	LD A,(IX+$15)	
+	LD (IX+$19),A	
+	RET	
+LBB75	RES 6,(IX+$10)	
+	RES 5,(IX+$10)	
+	LD H,(IX+$01)	
+	LD L,(IX+$00)	
+	BIT 7,(IX+$11)	
+	JR NZ,LBB8F	
+	XOR A	
+	SUB (IX+$17)	
+	JR LBB5E	
+LBB8F	LD A,(IX+$17)	
+	JR LBB5E	
+LBB94	BIT 7,(IX+$12)	
+	JR NZ,LBBA7	
+	LD A,H	
+	ADD A,(IY+$09)	
+	LD H,A	
+	LD D,(IY+$17)	
+	LD E,(IY+$16)	
+	JR LBBAE	
+LBBA7	DEC H	
+	LD D,(IY+$15)	
+	LD E,(IY+$14)	
+LBBAE	CALL LA129	
+	OR A	
+	JR NZ,LBBF6	
+	LD A,L	
+	ADD A,(IY+$06)	
+	LD L,A	
+	CALL LA129	
+	OR A	
+	JR NZ,LBBF6	
+	LD A,R	
+	JR Z,LBBF6	
+	BIT 6,A	
+	JR NZ,LBBCC	
+LBBC7	LD (IX+$11),$00	
+	RET	
+LBBCC	LD H,(IX+$01)	
+	LD L,(IX+$00)	
+	DEC L	
+	LD C,$FF	
+	BIT 2,A	
+	JR Z,LBBE1	
+	LD C,$01	
+	LD A,L	
+	ADD A,(IY+$07)	
+	INC A	
+	LD L,A	
+LBBE1	CALL LA129	
+	OR A	
+	JR NZ,LBBC7	
+	LD A,H	
+	ADD A,(IY+$08)	
+	LD H,A	
+	CALL LA129	
+	OR A	
+	JR NZ,LBBC7	
+	LD (IX+$11),C	
+	RET	
+LBBF6	LD (IX+$0B),E	
+	LD (IX+$0C),D	
+	SET 0,(IX+$10)	; set "moving" bit
+	SET 7,(IX+$10)	
+	SLA (IX+$0E)	
+	LD L,(IX+$00)	
+	LD H,(IX+$01)	
+	BIT 7,(IX+$12)	
+	JR NZ,$BC1C	
+	LD A,H	
+	ADD A,(IY+$08)	
+	SUB (IY+$06)	
+	LD H,A	
+LBC1C	LD A,R	
+	JR Z,LBC47	
+	LD A,L	
+	ADD A,(IY+$06)	
+	SUB (IY+$09)	
+	LD L,A	
+	CALL LA129	
+	OR A	
+	JR NZ,LBC47	
+	LD A,H	
+	LD C,H	
+	ADD A,(IY+$06)	
+	LD H,A	
+	CALL LA129	
+	OR A	
+	LD H,C	
+	JR NZ,LBC47	
+	RES 6,(IX+$10)	
+	XOR A	
+	SUB (IX+$17)	
+	INC L	
+	JP LBB5E	
+LBC47	LD A,(IX+$00)	
+	ADD A,(IY+$09)	
+	LD L,A	
+	CALL LA129	
+	OR A	
+	JR NZ,LBC6E	
+	LD C,H	
+	LD A,H	
+	ADD A,(IY+$06)	
+	LD H,A	
+	CALL LA129	
+	OR A	
+	LD H,C	
+	JR NZ,LBC6E	
+	RES 6,(IX+$10)	
+	LD A,(IX+$17)	
+	LD L,(IX+$00)	
+	JP LBB5E	
+LBC6E	SET 6,(IX+$10)	
+	RES 5,(IX+$10)	
+	LD H,(IX+$01)	
+	LD L,(IX+$00)	
+	BIT 7,(IX+$12)	
+	JR NZ,LBC89	
+	XOR A	
+	SUB (IX+$17)	
+	JP LBB5E	
+LBC89	LD A,(IX+$17)	
+	JP LBB5E	
+LBC8F	BIT 1,(IX+$10)	
+	JP NZ,LBD4E	
+	DEC (IX+$19)	
+	RET NZ	
+	CALL LB5E0	
+	BIT 0,(IX+$0D)	
+	JR Z,LBCC1	
+	BIT 7,(IX+$0D)	
+	JR NZ,LBCC1	
+	RES 0,(IX+$0D)	
+	CALL LB470	
+	CALL LB837	
+	LD A,(IX+$08)	
+	AND $0F	
+	LD E,A	
+	LD D,$00	
+	LD HL,LB676	
+	ADD HL,DE	
+	LD (HL),$00	
+LBCC1	BIT 5,(IX+$10)	
+	JR Z,LBCEA	
+	LD A,(IX+$02)	
+	LD B,(IX+$03)	
+	LD (IX+$03),A	
+	LD (IX+$02),B	
+	LD A,(IX+$0D)	
+	XOR $04	
+	LD (IX+$0D),A	
+	LD L,(IY+$04)	
+	LD H,(IY+$05)	
+	PUSH HL	
+	POP IY	
+	LD (IX+$13),L	; set X value
+	LD (IX+$14),H	; set Y value
+LBCEA	LD A,(IX+$1A)	
+	LD (IX+$00),A	
+	LD A,(IX+$1B)	
+	LD (IX+$01),A	
+	BIT 6,(IX+$10)	
+	JR Z,LBD04	
+	BIT 7,(IX+$18)	
+	JR Z,LBD0A	
+	JR LBD18	
+LBD04	BIT 7,(IX+$18)	
+	JR Z,LBD18	
+LBD0A	LD H,(IY+$19)	
+	LD L,(IY+$18)	
+	LD D,(IY+$11)	
+	LD E,(IY+$10)	
+	JR LBD24	
+LBD18	LD H,(IY+$1B)	
+	LD L,(IY+$1A)	
+	LD D,(IY+$13)	
+	LD E,(IY+$12)	
+LBD24	LD (IX+$0A),D	
+	LD (IX+$09),E	
+	LD (IX+$0C),H	
+	LD (IX+$0B),L	
+	LD A,(IX+$16)	
+	LD (IX+$19),A	
+	SET 1,(IX+$10)	
+	CALL LB5E0	
+	BIT 0,(IX+$0D)	
+	RET Z	
+	BIT 7,(IX+$0D)	
+	RET NZ	
+	CALL LB470	
+	CALL LB837	
+	RET	
+LBD4E	DEC (IX+$19)	
+	RET NZ	
+	SRL (IX+$0E)	
+	LD A,(IX+$0A)	
+	LD (IX+$0C),A	
+	LD A,(IX+$09)	
+	LD (IX+$0B),A	
+	RES 0,(IX+$10)	; clear "moving" bit
+	RES 1,(IX+$10)	
+	LD A,(IX+$18)	
+	BIT 6,(IX+$10)	
+	JR NZ,LBD7B	
+	LD (IX+$11),A	
+	RES 2,(IX+$0D)	
+	RET	
+LBD7B	LD (IX+$12),A	
+	SET 2,(IX+$0D)	
+	RET	
+
+LBD83	LD A,L	
+	AND C	
+	ADD A,C	
+	LD (IX+$0E),A	
+	LD HL,LBDA9	
+	INC (HL)	
+	LD A,$1F	
+	AND (HL)	
+	INC A	
+	LD (IX+$0F),A	
+	PUSH DE	
+	CALL L9D84	; Random
+	LD A,H	
+	AND $07	
+LBD9B	LD HL,LBDAA	; !!! mutable argument
+	ADD A,L	
+	LD L,A	
+	JR NC,LBDA3	
+	INC H	
+LBDA3	LD A,(HL)	
+	LD (IX+$04),A	; set DX value
+	POP DE	
+	RET	
+
+LBDA9	DEFB $00
+LBDAA	DEFB $41,$44,$05,$45,$02,$42,$43,$40
+LBDB2	DEFB $05,$45,$02,$42,$43,$03,$40,$41
+
+LBDBA	CALL LBEC7	
+	LD A,(L5B03+1)	
+	CP $03	
+	JR NC,LBDCB	
+	CALL LBEB2	
+	CALL LBE58	
+	RET	
+LBDCB	CP $04	
+	JR NC,LBDD6	
+	CALL LBE58	
+	CALL LBE85	
+	RET	
+LBDD6	CP $06	
+	JR NC,LBDDE	
+	CALL LBE85	
+	RET	
+LBDDE	CP $09	
+	JR NC,LBDE5	
+	CALL LBE85	
+LBDE5	CALL LC45C	
+	RET	
+
+LBDE9	DEFS $01
+
+LBDEA	LD A,(L5B03+1)	
+	CP $03	
+	JR NC,LBDFE	
+	CALL LBE9A	
+	CALL LBE40	
+	LD A,(L5B1A)	
+	CALL LC4D5	
+	RET	
+LBDFE	CP $04	
+	JR NC,LBE0F	
+	CALL LBE40	
+	CALL LBE6D	
+	LD A,(L5B1B)	
+	CALL LC4D5	
+	RET	
+LBE0F	CP $06	
+	JR NC,LBE1D	
+	CALL LBE6D	
+	LD A,(L5B1C)	
+	CALL LC4D5	
+	RET	
+LBE1D	CP $09	
+	JR NC,LBE36	
+	CALL LBE6D	
+	LD HL,LBDE9	
+	LD A,(L5B1D)	
+	CALL LC4D5	
+	LD A,$01	
+	XOR (HL)	
+	LD (HL),A	
+	RET Z	
+	CALL LC431	
+	RET	
+LBE36	CALL LC431	
+	LD A,(L5B1E)	
+	CALL LC4D5	
+	RET
+
+LBE40	LD A,(L5B16)	
+	LD B,A	
+	LD IX,(L5B1F)	
+LBE48	PUSH BC	
+	DEC (IX+$0F)	
+	CALL Z,LB737	
+	LD BC,$001A	
+	ADD IX,BC	
+	POP BC	
+	DJNZ LBE48	
+	RET
+
+LBE58	LD A,(L5B16)	
+	LD B,A	
+	LD IX,(L5B1F)	
+LBE60	PUSH BC	
+	CALL LB7BB	
+	LD BC,$001A	
+	ADD IX,BC	
+	POP BC	
+	DJNZ LBE60	
+	RET
+
+LBE6D	LD A,(L5B17)	
+	LD B,A	
+	LD IX,(L5B21)	
+LBE75	PUSH BC	
+	DEC (IX+$0F)	
+	CALL Z,LB737	
+	LD BC,$001A	
+	ADD IX,BC	
+	POP BC	
+	DJNZ LBE75	
+	RET	
+
+LBE85	LD A,(L5B17)	
+	LD B,A	
+	LD IX,(L5B21)	
+LBE8D	PUSH BC	
+	CALL LB7BB	
+	LD BC,$001A	
+	ADD IX,BC	
+	POP BC	
+	DJNZ LBE8D	
+	RET
+
+LBE9A	LD A,(L5B15)	
+	LD B,A	
+	LD IX,LC4F0	
+LBEA2	PUSH BC	
+	DEC (IX+$0F)	
+	CALL Z,LB737	
+	LD BC,$0015	
+	ADD IX,BC	
+	POP BC	
+	DJNZ LBEA2	
+	RET
+
+LBEB2	LD A,(L5B15)	
+	LD B,A	
+	LD IX,LC4F0	
+LBEBA	PUSH BC	
+	CALL LB7BB	
+	LD BC,$0015	
+	ADD IX,BC	
+	POP BC	
+	DJNZ LBEBA	
+	RET
+
+LBEC7	LD HL,LB676	
+	LD (HL),$80	
+	INC HL	
+	LD B,$0F	
+	XOR A	
+LBED0	LD (HL),A	
+	INC HL	
+	DJNZ LBED0	
+	LD HL,$F000	; ???
+	LD (LB7B9),HL	
+	RET
+
+LBEDB	CALL LBEC7	
+	LD HL,LBDAA	
+	LD (LBD9B+1),HL	
+	LD HL,LC20A
+	LD DE,LC4F0
+	LD BC,$0015
+	LDIR		; Copy 21 byte from $C20A to $C4F0
+	LD A,(L5B13)	
+	LD B,A	
+LBEF3	PUSH BC	
+	LD HL,LC21F	
+	PUSH DE	
+	POP IX	
+	LD BC,$0015	
+	LDIR	
+	PUSH DE	
+	CALL L9D84	; Random
+	POP DE	
+	LD (IX+$00),H	
+	LD C,$3F	
+	CALL LBD83	
+	POP BC	
+	DJNZ LBEF3	
+	LD A,(L5B14)	
+	LD B,A	
+	LD C,$00	
+	LD A,(L5B05)	; get current Random
+	BIT 5,A	
+	JR Z,LBF1D	
+	INC C	
+LBF1D	PUSH BC	
+	LD HL,LC234	
+	PUSH DE	
+	POP IX	
+	LD BC,$0015	
+	LDIR	
+	PUSH DE	
+	CALL L9D84	; Random
+	POP DE	
+	LD (IX+$00),H	
+	LD A,L	
+	AND $03	
+	ADD A,(IX+$01)	
+	LD (IX+$01),A	
+	LD A,L	
+	SRL A	
+	SRL A	
+	AND $07	
+	JR NZ,LBF44	
+	INC A	
+LBF44	LD (IX+$03),A	
+	LD C,$1F	
+	CALL LBD83	
+	POP BC	
+	BIT 0,C	
+	JR Z,LBF5D	
+	LD (IX+$09),$85	
+	LD (IX+$0B),$85	
+	LD (IX+$11),$FE	
+LBF5D	DJNZ LBF1D	
+	LD (L5B1F),DE	
+	LD A,(L5B16)	
+	LD HL,$0F1B	
+	LD IY,LC2EB	
+	CALL LBFB0	
+	LD (L5B21),DE	
+	LD A,(L5B17)	
+	LD HL,$2A3B	
+	LD IY,LC331	
+	CALL LBFB0	
+	LD (L5B23),DE	
+	LD IY,LBFA0	
+	LD A,(L5B18)	
+	LD HL,LBDB2	
+	LD (LBD9B+1),HL	
+	CALL LC009	
+	LD IY,LBFA8	
+	LD A,(L5B19)	
+	CALL LC009	
+	RET
+
+LBFA0	DEFB $05,$00,$AD,$C3,$1A,$00,$00,$0F
+LBFA8	DEFB $10,$11,$29,$C4,$1C,$00,$00,$0F
+
+LBFB0	LD (LBFC3+1),IY	
+	LD (LC007),HL	
+	LD B,A	
+LBFB8	PUSH BC	
+	PUSH DE	
+	CALL L9D84	; Random
+	LD A,H	
+	AND $0E	
+	LD E,A	
+	LD D,$00	
+LBFC3	LD HL,$0000	; !!! mutable argument
+	ADD HL,DE	
+	LD C,(HL)	
+	INC HL	
+	LD B,(HL)	
+	LD L,C	
+	LD H,B	
+	LD BC,$001A	
+	POP DE	
+	PUSH DE	
+	POP IX	
+	LDIR	
+	LD HL,($C007)	
+	LD (IX+$16),H	
+	LD (IX+$15),L	
+	LD A,(L5B05)	; get current Random
+	AND $7F	
+	ADD A,$40	
+	LD (IX+$00),A	
+	LD A,(L5B05+1)	
+	SRL A	
+	SRL A	
+	SRL A	
+	AND $0F	
+	LD H,A	
+	LD A,L	
+	SUB H	
+	LD (IX+$01),A	
+	PUSH DE	
+	CALL L9D84	; Random
+	POP DE	
+	LD C,$0F	
+	CALL LBD83	
+	POP BC	
+	DJNZ LBFB8	
+	RET
+
+LC007	DEFW $0000
+
+LC009	LD B,A	
+	LD (IY+$05),E	
+	LD (IY+$06),D	
+	LD DE,$F8F8	
+	LD HL,LAC5D+$3FF	
+LC016	LD A,(HL)	
+	CP (IY+$00)	
+	JR Z,LC039	
+	CP (IY+$01)	
+	JR Z,LC039	
+LC021	DEC HL	
+	LD A,E	
+	SUB $08	
+	LD E,A	
+	CP $F8	
+	JR NZ,LC037	
+	LD A,D	
+	SUB $08	
+	LD D,A	
+	CP $38	
+	JR NZ,LC037	
+	LD D,$F8	
+	LD HL,LAC5D+$3FF	
+LC037	JR LC016	
+LC039	PUSH BC	
+	PUSH HL	
+	PUSH DE	
+	CALL L9D84	; Random
+	LD D,(IY+$03)	
+	LD E,(IY+$02)	
+	LD A,L	
+	AND $F0	
+	JR Z,LC04F	
+	POP DE	
+	POP HL	
+	POP BC	
+	JR LC021	
+LC04F	LD A,H	
+	AND $06	
+	LD L,A	
+	LD H,$00	
+	ADD HL,DE	
+	LD E,(HL)	
+	INC HL	
+	LD D,(HL)	
+	EX DE,HL	
+	LD C,(IY+$04)	
+	LD B,$00	
+	LD E,(IY+$05)	
+	LD D,(IY+$06)	
+	PUSH DE	
+	POP IX	
+	LDIR	
+	LD (IY+$05),E	
+	LD (IY+$06),D	
+	POP DE	
+	LD A,D	
+	ADD A,$03	
+	LD (IX+$01),A	
+	LD A,E	
+	ADD A,$04	
+	LD (IX+$00),A	
+	LD A,(L5B05+1)	
+	LD L,A	
+	LD C,(IY+$07)	
+	CALL LBD83	
+	POP HL	
+	POP BC	
+	DJNZ LC021	
+	LD E,(IY+$05)	
+	LD D,(IY+$06)	
+	RET	
+
+LC092	DEFW $0000,$0000,$0000,$0807	
+	DEFW $0403,$1840,$C080,$0000	
+	DEFW $0000,$0000,$0000,$0201	
+	DEFW $0302,$1010,$2030,$0000	
+	DEFW $0000,$0000,$C0CE,$0302	
+	DEFW $0201,$0818,$1803,$0000	
+	DEFW $8285,$8254,$82B6,$82E6	
+	DEFW $82C6,$82F6,$0000,$0000	
+	DEFW $C0B2,$0201,$0302,$1010	
+	DEFW $2003,$0000,$8347,$8316	
+	DEFW $8378,$83A8,$8388,$83B8	
+	DEFW $0000,$0000,$0000,$0706	
+	DEFW $0302,$1038,$7005,$0000	
+	DEFW $64E5,$6364,$6666,$6846	
+	DEFW $0000,$0000,$0000,$0807	
+	DEFW $0403,$1840,$C006,$0000	
+	DEFW $70B7,$6A26,$6CC7,$7358	
+	DEFW $0000,$0000,$0000,$0504	
+	DEFW $0201,$0828,$2804,$0000	
+	DEFW $7BCE,$7C4F,$7D50,$7CD0	
+	DEFW $0000,$0000,$0000,$0403	
+	DEFW $0403,$1820,$6001,$0000	
+	DEFW $7748,$7869,$7942,$7821	
+	DEFW $0000,$0000,$C166,$0403	
+	DEFW $0201,$0820,$2005,$0000	
+	DEFW $60D9,$6000,$6061,$613A	
+	DEFW $6091,$616A,$0000,$0000	
+	DEFW $C14A,$0201,$0403,$1810	
+	DEFW $3005,$0000,$628B,$61B2	
+	DEFW $6213,$62EC,$6243,$631C	
+	DEFW $0000,$0000,$C19E,$0403	
+	DEFW $0201,$0820,$2003,$0000	
+	DEFW $7A1B,$798A,$79D3,$7A64	
+	DEFW $79EB,$7A7C,$0000,$0000	
+	DEFW $C182,$0201,$0403,$1810	
+	DEFW $3003,$0000,$7AF5,$7AAC	
+	DEFW $7B3E,$7B86,$7B56,$7B9E	
+	DEFW $0000,$0000,$C1D6,$0504	
+	DEFW $0201,$0828,$2805,$0000	
+	DEFW $7EF1,$7DD0,$7E51,$7F72	
+	DEFW $7E91,$7FB2,$0000,$0000	
+	DEFW $C1BA,$0201,$0504,$2010	
+	DEFW $4005,$0000,$8133,$8012	
+	DEFW $8093,$81B4,$80D3,$81F4	
+	DEFW $0000,$0000,$0000,$0807	
+	DEFW $0302,$1040,$8006,$0000	
+	DEFW $8839,$83D8,$8599,$89FA	
+LC20A	DEFB $F8,$06,$04,$01,$05,$81,$C4,$00,$00,$9A,$8C,$9A,$8C,$18,$28,$28,$01,$00,$00,$92,$C0	
+LC21F	DEFB $00,$07,$04,$05,$00,$9F,$BF,$00,$00,$43,$8D,$43,$8D,$18,$00,$00,$00,$01,$00,$A2,$C0	
+LC234	DEFB $00,$09,$04,$02,$00,$9F,$BF,$00,$00,$54,$82,$54,$82,$18,$00,$00,$00,$02,$00,$B2,$C0	
+	DEFB $00,$00,$04,$02,$00,$85,$B8,$00,$00,$64,$63,$64,$63,$18,$00,$00,$00,$02,$00,$EA,$C0	
+	DEFB $00,$00,$02,$00,$00,$00,$00,$00,$04,$02,$00,$85,$B8,$00,$00,$26,$6A,$26,$6A,$18,$00	
+	DEFB $00,$00,$02,$00,$02,$C1,$00,$00,$02,$00,$00,$00,$00,$00,$04,$02,$00,$85,$B8,$00,$00	
+	DEFB $00,$60,$00,$60,$18,$00,$00,$00,$02,$00,$4A,$C1,$00,$00,$02,$00,$00,$00,$00,$00,$04	
+	DEFB $02,$00,$85,$B8,$00,$00,$4F,$7C,$4F,$7C,$18,$00,$00,$00,$02,$00,$1A,$C1,$00,$00,$02	
+	DEFB $00,$00,$00,$00,$00,$04,$02,$00,$85,$B8,$00,$00,$69,$78,$69,$78,$18,$00,$00,$00,$02	
+	DEFB $00,$32,$C1,$00,$00,$02,$00,$00,$00,$00,$00,$04,$02,$00,$85,$B8,$00,$00,$8A,$79,$8A	
+	DEFB $79,$18,$00,$00,$00,$02,$00,$82,$C1,$00,$00,$02,$00,$00,$00	
+LC2EB	DEFB $49,$C2,$64,$C2,$7F,$C2,$9A,$C2	
+	DEFB $B5,$C2,$D0,$C2,$9A,$C2,$49,$C2	
+	DEFB $00,$00,$04,$02,$00,$85,$B8,$00	
+	DEFB $00,$D0,$7D,$D0,$7D,$18,$00,$00	
+	DEFB $00,$02,$00,$BA,$C1,$00,$00,$02	
+	DEFB $00,$00,$00,$00,$00,$04,$02,$00	
+	DEFB $85,$B8,$00,$00,$D8,$83,$D8,$83	
+	DEFB $18,$00,$00,$00,$02,$00,$F2,$C1	
+	DEFB $00,$00,$02,$00,$00,$00
+LC331	DEFB $49,$C2,$64,$C2,$7F,$C2,$9A,$C2	
+	DEFB $B5,$C2,$D0,$C2,$FB,$C2,$16,$C3	
+	DEFB $00,$00,$02,$04,$00,$72,$B9,$00	
+	DEFB $00,$47,$83,$47,$83,$1C,$00,$00	
+	DEFB $00,$00,$02,$CE,$C0,$00,$00,$02	
+	DEFB $00,$00,$00,$00,$00,$02,$04,$00	
+	DEFB $72,$B9,$00,$00,$8B,$62,$8B,$62	
+	DEFB $1C,$00,$00,$00,$00,$02,$66,$C1	
+	DEFB $00,$00,$02,$00,$00,$00,$00,$00	
+	DEFB $02,$04,$00,$72,$B9,$00,$00,$33	
+	DEFB $81,$33,$81,$1C,$00,$00,$00,$00	
+	DEFB $02,$D6,$C1,$00,$00,$02,$00,$00	
+	DEFB $00,$00,$00,$02,$04,$00,$72,$B9	
+	DEFB $00,$00,$F5,$7A,$F5,$7A,$1C,$00	
+	DEFB $00,$00,$00,$02,$9E,$C1,$00,$00	
+	DEFB $02,$00,$00,$00,$41,$C3,$5C,$C3	
+	DEFB $77,$C3,$92,$C3,$00,$00,$04,$02	
+	DEFB $00,$64,$BA,$00,$00,$54,$82,$54	
+	DEFB $82,$18,$00,$00,$00,$02,$00,$B2	
+	DEFB $C0,$03,$01,$02,$00,$00,$00,$00	
+	DEFB $00,$00,$00,$04,$02,$00,$64,$BA	
+	DEFB $00,$00,$00,$60,$00,$60,$18,$00	
+	DEFB $00,$00,$02,$00,$4A,$C1,$04,$02	
+	DEFB $02,$00,$00,$00,$00,$00,$00,$00	
+	DEFB $04,$02,$00,$64,$BA,$00,$00,$8A	
+	DEFB $79,$8A,$79,$18,$00,$00,$00,$02	
+	DEFB $00,$82,$C1,$03,$01,$02,$00,$00	
+	DEFB $00,$00,$00,$00,$00,$04,$02,$00	
+	DEFB $64,$BA,$00,$00,$D0,$7D,$D0,$7D	
+	DEFB $18,$00,$00,$00,$02,$00,$BA,$C1	
+	DEFB $04,$02,$02,$00,$00,$00,$00,$00	
+	DEFB $B5,$C3,$D2,$C3,$EF,$C3,$0C,$C4
+
+LC431	LD A,(L5B18)	
+	LD B,A	
+	LD IX,(L5B23)	
+LC439	PUSH BC	
+	DEC (IX+$0F)	
+	CALL Z,LB737	
+	LD BC,$001A	
+	ADD IX,BC	
+	POP BC	
+	DJNZ LC439	
+	LD A,(L5B19)	
+	LD B,A	
+LC44C	PUSH BC	
+	DEC (IX+$0F)	
+	CALL Z,LB737	
+	LD BC,$001C	
+	ADD IX,BC	
+	POP BC	
+	DJNZ LC44C	
+	RET
+
+LC45C	LD A,(L5B18)	
+	LD B,A	
+	LD IX,(L5B23)	
+LC464	PUSH BC	
+	CALL LB7BB	
+	LD BC,$001A	
+	ADD IX,BC	
+	POP BC	
+	DJNZ LC464	
+	LD A,(L5B19)	
+	LD B,A	
+LC474	PUSH BC	
+	CALL LB7BB	
+	LD BC,$001C	
+	ADD IX,BC	
+	POP BC	
+	DJNZ LC474	
+	RET	
+
+LC481	LD A,(IX+$10)	
+	OR A	
+	JR NZ,LC490	
+	DEC (IY+$0C)	
+	RET NZ	
+	LD (IX+$10),$03	
+	RET	
+LC490	DEC A	
+	JR NZ,LC4A4	
+	DEC (IY+$0C)	
+	RET NZ	
+	LD (IX+$0E),$28	
+	LD (IX+$10),$02	
+	LD (IX+$11),$FF	
+	RET	
+LC4A4	DEC A	
+	JR NZ,LC4BA	
+	DEC (IX+$0E)	
+	LD A,(IX+$0E)	
+	CP $08	
+	RET NZ	
+	LD (IX+$10),$00	
+	LD A,R	
+	LD (IY+$0C),A	
+	RET	
+LC4BA	INC (IX+$0E)	
+	LD A,(IX+$0E)	
+	CP $28	
+	RET NZ	
+	LD (IX+$0E),$64	
+	LD (IX+$11),$00	
+	LD (IX+$10),$01	
+	LD A,R	
+	LD (IY+$0C),A	
+	RET	
+
+; Delay ??
+LC4D5	OR A	
+	RET Z	
+LC4D7	LD BC,(L5B25)	; get value 150 / 100 / 50 / 1, depending on Game level
+	LD DE,$0000	
+	LD HL,$0000	
+	LDIR	
+	DEC A	
+	JR NZ,LC4D7	
+	RET
+
+LC4E7	DEFB $FB,$02,$00,$2C,$42,$4C,$46,$49	
+	DEFB $4C
+
+LC4F0	DEFB $2B,$31
+LC4F2	DEFB $30,$32,$33,$0D,$DC,$3C	
+	DEFB $47,$43,$32,$20,$4A,$52,$20,$47
+
+;LC500	DEFS $1400	
+
+;----------------------------------------------------------------------------
