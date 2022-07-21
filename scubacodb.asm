@@ -4,13 +4,13 @@
 
 ;----------------------------------------------------------------------------
 
-L5C05	EQU $5C05
-L5C08	EQU $5C08
-L5C6A	EQU $5C6A
-L5C78	EQU $5C78
-L5C79	EQU $5C79
-L5C7B	EQU $5C7B
-L5C8D	EQU $5C8D
+L5C05	EQU $5C05	; KSTATE5
+L5C08	EQU $5C08	; LAST-K - Last key pressed
+L5C6A	EQU $5C6A	; FLAGS2 - More flags
+L5C78	EQU $5C78	; FRAMES - Frame counter, 1st byte
+L5C79	EQU $5C79	; FRAMES - Frame counter, 2nd byte
+L5C7B	EQU $5C7B	; UDG - Address of first user defined graphic
+L5C8D	EQU $5C8D	; ATTR-P - Permanent current colours
 
 ;----------------------------------------------------------------------------
 

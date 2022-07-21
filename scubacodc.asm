@@ -13,8 +13,8 @@ LD990	DI
 	PUSH IX	
 	PUSH IY	
 	LD HL,$0000	
-	LD (L5B44),HL	
-	LD (LDEFF),HL	
+	LD (L5B44),HL	; reset Score value
+	LD (LDEFF),HL	; reset HELD value
 	LD A,$03	; Number of lives
 	LD (L5B37),A	; set the initial value
 LD9A3	CALL L9DAA	; Prepare the world mini-map (AC5D table)
@@ -44,7 +44,7 @@ LD9DB	LD A,(L5B37)	; get Number of lives
 LD9E7	LD A,(L5B10)	; Game level 1..4
 	CP $04	
 	JR Z,LD9EF	
-	INC A	
+	INC A		; increase Game level
 LD9EF	LD (L5B10),A	; Save game level 1..4
 	JR LD9A3	
 LD9F4	LD B,$00	
@@ -67,8 +67,8 @@ LD9F6	PUSH BC
 	LD (L5B37),A	; set Number of lives
 	JR LD9DB	
 LDA1E	LD A,(L5B37)	; get Number of lives
-	CP $01	
-	JR Z,LDA33	
+	CP $01		; last live?
+	JR Z,LDA33	; yes => game over
 	DEC A		; One live less
 	LD (L5B37),A	; set Number of lives
 	LD HL,LE361	
@@ -160,7 +160,7 @@ LDAA2	CALL LDA59	; Print char and shift !!! mutable argument DA59 / DA63
 	JR NZ,LDAA1	
 	RET
 
-; Prepare game screen and some variables
+; Prepare game screen, indicators, and some variables
 LDAAD	LD A,$30	
 	CALL LDA39	; Clear screen with attribute A
 	LD A,$01	
@@ -213,36 +213,36 @@ LDAAD	LD A,$30
 	LD HL,LDC76	; "1 2 3 4"
 	LD BC,$101D	
 	CALL LDA9C	; Print string
-	LD HL,$58FB	
-	LD (LDE55),HL	
-	LD (HL),$28	
+	LD HL,$58FB	; address of top of Depth indicator in attributes area
+	LD (LDE55),HL	; set Depth initial level
+	LD (HL),$28	; indicate initial Depth level
 	DEC HL	
 	DEC HL	
-	LD (LDE57),HL	
-	LD (HL),$20	
+	LD (LDE57),HL	; set Oxygen initial level
+	LD (HL),$20	; indicate initial Oxygen level
 	LD A,(L5B10)	; Game level 1..4
 	DEC A	
 	RRCA	
 	RRCA	
 	LD E,A	
 	LD D,$00	
-	LD HL,$58FD	
+	LD HL,$58FD	; base address in attributes area
 	ADD HL,DE	
-	LD (HL),$4F	
+	LD (HL),$4F	; indicate Game level
 	LD A,(L5B37)	; get Number of lives
 	DEC A	
 	RRCA	
 	RRCA	
 	LD E,A	
 	LD D,$00	
-	LD HL,$5A1D	
+	LD HL,$5A1D	; base address in attributes area
 	ADD HL,DE	
 	LD (LDE59),HL	
-	LD (HL),$4F	
+	LD (HL),$4F	; indicate nummber of lives
 	LD IX,LE33B	; Diver object record address
-	CALL LDED9	
-	CALL LDEE5	
-	CALL LDEF1	
+	CALL LDED9	; Print high score number
+	CALL LDEE5	; Print score number
+	CALL LDEF1	; Print HELD number
 	LD A,(L5B10)	; Game level 1..4
 	DEC A	
 	ADD A,A	
@@ -255,23 +255,23 @@ LDAAD	LD A,$30
 	ADD HL,DE	; HL = $DDF0 + ([Game level] - 1) * 16
 	LD DE,L5B27	
 	LD BC,$000E	
-	LDIR	
+	LDIR		; copy 14 bytes = 7 words
 	LD A,(L5B10)	; Game level 1..4
 	LD C,A	
 	LD A,$05	
-	SUB C	
+	SUB C		; A = 5 - [Game level] => 4 / 3 / 2 / 1
 	LD (IX+$1C),A	
 	LD (IX+$1E),A	
 	LD C,A	
 	LD A,$16	
-	SUB C	
+	SUB C		; A => 12 / 13 / 14 / 15
 	LD (IX+$1D),A	
 	LD (IX+$1B),A	
 	LD A,(L5B10)	; Game level 1..4
 	ADD A,A	
 	LD C,A	
 	LD A,$0A	
-	SUB C	
+	SUB C		; A = 10 - [Game level] * 2
 	ADD A,$02	
 	LD (L5B0E),A	; = 10 - [Game level] * 2 + 2 => 10 / 8 / 6 / 4
 	SUB $03	
@@ -317,6 +317,7 @@ LDC01	ADD A,$32
 	LD (L5B25),A	
 	RET	
 
+; Texts for indicator panel
 LDC09	DEFB $80,$81,$81,$81,$81,$81,$81,$85,$FF	; Indicator top border
 LDC12	DEFB $83,$81,$81,$81,$81,$81,$81,$84,$FF	; Indicator bottom border
 LDC1B	DEFB $28,$29,$27,$28,$FF			; "HIGH"
@@ -335,8 +336,9 @@ LDC65	DEFB $86,$87,$87,$87,$87,$87,$87,$87		; Vertical gauge
 	DEFB $FF
 LDC76	DEFB $11,$00,$12,$00,$13,$00,$14,$FF		; "1 2 3 4"
 
-LDC7E	DEFW $0000
+LDC7E	DEFW $0000	; Char coords for printing on the screen, see DA59
 
+; Tiles 8x8
 LDC80	DEFB $00,$7F,$40,$58,$58,$40,$43,$42
 	DEFB $00,$FF,$00,$18,$18,$00,$FF,$00
 	DEFB $42,$42,$42,$5A,$5A,$42,$42,$42
@@ -385,11 +387,16 @@ LDC80	DEFB $00,$7F,$40,$58,$58,$40,$43,$42
 	DEFB $00,$00,$00,$00,$00,$00,$00,$00
 
 ; Blocks of 14 bytes to copy to 5B27, blocks aligned to 16 bytes
+;	     L5B27 L5B29 L5B2B L5B2D L5B2F L5B31 L5B33
 LDDF0	DEFW $0002,$0005,$004B,$0019,$0032,$00FA,$0019,$0000	; Level 1
 	DEFW $0004,$000A,$0032,$0096,$0064,$01F4,$0032,$0000	; Level 2
 	DEFW $0006,$000F,$0096,$00E1,$004B,$02EE,$004B,$0000	; Level 3
 	DEFW $0008,$0014,$0064,$00C8,$012C,$03E8,$0064		; Level 4
 
+; Update gauge indicator on the screen
+; I: A = value 0..15, DE = base address in screen attributes area
+; I: HL = old address for the indicator
+; O: HL = new address for the indicator
 LDE2E	LD (HL),$38	
 	RRCA	
 	RRCA	
@@ -400,26 +407,29 @@ LDE2E	LD (HL),$38
 	LD A,H	
 	AND $01	
 	LD H,A	
-	ADD HL,DE	
+	ADD HL,DE	; add base address
 	LD (HL),C	
 	RET	
 
-LDE3E	LD HL,(LDE55)	
-	LD DE,$58FB	
+; Update Depth indicator
+LDE3E	LD HL,(LDE55)	; get Depth indicator address
+	LD DE,$58FB	; base address in screen attributes area
 	LD C,$28	
-	LD A,(L5B03+1)	
+	LD A,(L5B03+1)	; get screen position on mini-map, row value
 	INC A	
 	SRL A	
-	AND $0F	
-	CALL LDE2E	
-	LD (LDE55),HL	
+	AND $0F		; 0..15
+	CALL LDE2E	; Update the gauge indicator on the screen
+	LD (LDE55),HL	; set Depth indicator address
 	RET
 
-LDE55	DEFW $0000
-LDE57	DEFW $0000
-LDE59	DEFW $0000
-LDE5B	DEFW $FFFF
+LDE55	DEFW $0000	; Depth indicator, address in screen attributes
+LDE57	DEFW $0000	; Oxygen indicator, address in screen attributes
+LDE59	DEFW $0000	; Lives indicator, address in screen attributes
+LDE5B	DEFW $FFFF	; Oxygen level
 
+; Update Oxygen indicator
+; I: HL = new value for Oxygen
 LDE5D	LD (LDE5B),HL	
 	LD A,H	
 	SRL A	
@@ -427,25 +437,28 @@ LDE5D	LD (LDE5B),HL
 	SRL A	
 	SRL A	
 	LD H,A	
-	LD A,$0F	
+	LD A,$0F	; 0..15
 	SUB H	
-	LD DE,$58F9	
+	LD DE,$58F9	; base address in screen attributes area
 	LD C,$20	
-	LD HL,(LDE57)	
+	LD HL,(LDE57)	; get Oxygen indicator address
 	CP $0E	
 	JR C,LDE7E	
-	CALL LE645	
+	CALL LE645	; Play melody LE629
 	LD C,$10	
-LDE7E	CALL LDE2E	
-	LD (LDE57),HL	
+LDE7E	CALL LDE2E	; Update the gauge indicator on the scree
+	LD (LDE57),HL	; set Oxygen indicator address
 	RET	
 
+; Print decimal number
+; I: HL = number to print
+; I: DE = address on the screen
 LDE85	LD (IX+$23),B	
 	PUSH DE	
-	LD IY,LE5E0	
+	LD IY,LE5E0	; address for list of dividers: 10000, 1000, 100, 10, 1
 LDE8D	LD C,$FF	
 	LD E,(IY+$00)	
-	LD D,(IY+$01)	
+	LD D,(IY+$01)	; get divider in DE
 	BIT 7,D	
 	JR Z,LDEA0	
 	LD (IX+$23),D	
@@ -469,7 +482,7 @@ LDEB6	EX (SP),HL
 	SLA C	
 	SLA C	
 	SLA C	
-	LD HL,$3D80	; ???
+	LD HL,$3D80	; ZX Charset (3D00) + $80 = address of char '0'
 	ADD HL,BC	
 	LD B,$08	
 	PUSH DE	
@@ -487,29 +500,32 @@ LDEC7	LD A,(HL)
 	POP DE	
 	RET
 
+; Print high score number
 LDED9	LD B,$00	
 	LD HL,(L5B4B)	
-	LD DE,$4059	
-	CALL LDE85	
+	LD DE,$4059	; screen address AT 25,2
+	CALL LDE85	; Print decimal number
 	RET
 
+; Print score number
 LDEE5	LD B,$00	
-	LD HL,(L5B44)	
-	LD DE,$4099	
-	CALL LDE85	
+	LD HL,(L5B44)	; get Score number
+	LD DE,$4099	; screen address AT 25,4
+	CALL LDE85	; Print decimal number
 	RET
 
+; Print HELD number
 LDEF1	LD B,$02	
-	LD HL,(LDEFF)	
-	LD DE,$40DA	
-	CALL LDE85	
+	LD HL,(LDEFF)	; get HELD value
+	LD DE,$40DA	; screen address AT 26,6
+	CALL LDE85	; Print decimal number
 	RET
 
 LDEFD	DEFB $00,$00	
-LDEFF	DEFB $00,$00
+LDEFF	DEFW $0000	; HELD value
 LDF01	DEFB $00,$00,$00,$00,$00,$00,$02,$03
 	DEFB $02,$03,$18,$10,$00,$30
-LDF0F	DEFB $00,$00
+LDF0F	DEFW $0000
 LDF11	DEFB $00,$00,$00,$00,$00,$00	
 	DEFB $00,$00,$00,$00,$00,$00,$00,$00	
 	DEFB $00,$00,$00,$00,$00,$00
@@ -571,7 +587,7 @@ LE021	LD A,(IX+$13)	; get X value
 	ADD A,(IX+$04)	; add DX
 	LD (IX+$13),A	; set X value
 	SRL A	
-	AND $07	
+	AND $07		; 0..7
 	CP (IX+$02)	
 	LD (IX+$15),A	
 	JR Z,LE08D	
@@ -593,7 +609,7 @@ LE021	LD A,(IX+$13)	; get X value
 	SET 2,(IX+$10)	
 	DEC L	
 	JR LE08D	
-LE068	BIT 7,(IX+$04)	
+LE068	BIT 7,(IX+$04)	; check DX sign - moving left?
 	JR NZ,LE08D	
 	BIT 7,(IX+$11)	
 	JR NZ,LE08D	
@@ -618,7 +634,7 @@ LE08D	LD A,(IX+$14)	; get Y value
 	JR Z,LE0EA	
 	CP $07	
 	JP NZ,LE120	
-	BIT 7,(IX+$05)	; check DY value - moving up?
+	BIT 7,(IX+$05)	; check DY sign - moving up?
 	JR Z,LE120	
 	BIT 7,(IX+$12)	
 	JR Z,LE120	
@@ -638,7 +654,7 @@ LE0CC	DEC (IX+$01)
 	JR NC,$E120	
 	ADD A,$08	
 	LD (IX+$01),A	
-	DEC H	
+	DEC H		; -1 row
 	SET 2,(IX+$10)	
 	JR LE120	
 LE0EA	BIT 7,(IX+$05)	; check DY value - moving up?
@@ -651,14 +667,14 @@ LE0EA	BIT 7,(IX+$05)	; check DY value - moving up?
 	JR NZ,LE10A	
 	LD A,(IX+$1A)	
 	CP $46	
-	CALL Z,LE9B0	
+	CALL Z,LE9B0	; => plus one live
 LE10A	RES 3,(IX+$0D)	
 	LD A,(IX+$01)	
 	CP (IX+$1D)	
 	JR C,LE120	
 	SUB $08	
 	LD (IX+$01),A	
-	INC H	
+	INC H		; +1 row deeper
 	SET 2,(IX+$10)	
 LE120	LD A,(IX+$0D)	
 	AND $18	
@@ -670,14 +686,14 @@ LE120	LD A,(IX+$0D)
 	PUSH IX	
 	PUSH IY	
 	LD A,L	
-	AND $1F	
+	AND $1F		; column 0..31
 	LD L,A	
 	LD A,H	
-	AND $1F	
+	AND $1F		; row 0..31
 	LD H,A	
 	LD (L5B03),HL	; set Screen position on mini-map
 	CALL L9C56	; Draw game screen
-	CALL LDE3E	
+	CALL LDE3E	; Update Depth indicator
 	LD HL,(LB7B9)	
 	LD DE,(L5B35)	
 	LD (LB7B9),DE	
@@ -851,6 +867,7 @@ LE2DB	BIT 3,(IX+$10)
 	IN A,(C)	; read the port for Clockwise key
 	AND D	
 	JR NZ,LE2F1	; not pressed => skip rotate
+; Clockwise key pressed
 	INC E		; rotate clockwise
 LE2F1	LD BC,(L5B3B)	; get port for Anticlockwise key
 	LD A,(L5B3D)	; get bit mask for Anticlockwise key
@@ -858,6 +875,7 @@ LE2F1	LD BC,(L5B3B)	; get port for Anticlockwise key
 	IN A,(C)	; read the port for Anticlockwise key
 	AND D	
 	JR NZ,LE2FF	; not pressed => skip rotate
+; Anticlockwise key pressed
 	DEC E		; rotate anticlockwise
 LE2FF	LD A,$0F	
 	AND E	
@@ -868,6 +886,7 @@ LE2FF	LD A,$0F
 	IN A,(C)	; read the port for Accelerate key
 	AND D	
 	JR NZ,LE31F	; not pressed => skip
+; Accelerate key pressed
 	LD A,(IX+$0E)	
 	SET 0,(IX+$10)	; set "moving" bit
 	CP $08	
@@ -879,6 +898,7 @@ LE31F	LD BC,(L5B41)	; get port for Decelerate key
 	IN A,(C)	; read the port for Decelerate key
 	AND D	
 	RET NZ		; not pressed => return
+; Decelerate key pressed
 	LD A,(IX+$0E)	
 	CP $14	
 	JR NZ,LE337	
@@ -901,7 +921,7 @@ LE344	DEFW $0000	; (IX+$09) Sprite address
 LE346	DEFW $0000	; (IX+$0B) Sprite address
 LE348	DEFB $18	; (IX+$0D) ??? bits 0/1/2/3/4/5/6/7
 LE349	DEFB $14	; (IX+$0E) speed factor ??? 12 20 40 100; $08 max speed, $14 min speed
-LE34A	DEFB $14	; (IX+$0F) ??? $03
+LE34A	DEFB $14	; (IX+$0F) speed counter
 LE34B	DEFB $00	; (IX+$10) ??? bits 0/1/2/3/4/5/6/7; bit0: 1 = diver moving, 0 = diver stopped
 LE34C	DEFB $00	; (IX+$11) ??? $00 $FF
 LE34D	DEFB $00	; (IX+$12) ??? $00
@@ -930,20 +950,20 @@ LE364	BIT 5,(IX+$10)
 	RET NZ	
 	BIT 7,(IX+$10)	
 	JP Z,LE767	
-	LD HL,(LDE5B)	
+	LD HL,(LDE5B)	; get Oxygen level
 	LD A,(L5B10)	; Game level 1..4
 	ADD A,A	
 	ADD A,A	
-	ADD A,A	
-	ADD A,$0A	
+	ADD A,A		; *8
+	ADD A,$0A	; *8 + 10
 	LD E,A	
 	LD D,$00	
 	LD A,H	
-	SBC HL,DE	
-	LD (LDE5B),HL	
+	SBC HL,DE	; HL = [Oxygen] - [Game level] * 8 - 10
+	LD (LDE5B),HL	; set Oxygen level
 	CP H	
-	CALL NZ,LDE5D	
-	LD A,(LDE5B+1)	
+	CALL NZ,LDE5D	; => Update Oxygen indicator
+	LD A,(LDE5B+1)	; get Oxygen high byte
 	AND $F0	
 	JR NZ,LE393	
 	CALL LE43A	; Explosion
@@ -1003,8 +1023,8 @@ LE3D2	OR A
 	LD (IX+$0C),H	
 	LD (IX+$21),$E6	
 	LD HL,$0000	
-	LD (LDEFF),HL	
-	CALL LDEF1	
+	LD (LDEFF),HL	; reset HELD value
+	CALL LDEF1	; Print HELD number
 	RES 6,(IX+$10)	
 	LD HL,LE604	; Melody address
 	CALL LE5EC	; Play melody
@@ -1046,8 +1066,8 @@ LE45A	LD (IX+$09),L
 	LD HL,LE61C	
 	CALL LE5EC	; Play melody
 	LD HL,$0000	
-	LD (LDEFF),HL	
-	CALL LDEF1	
+	LD (LDEFF),HL	; reset HELD value
+	CALL LDEF1	; Print HELD number
 	RET	
 
 ; I: IX = Object address = $E33B
@@ -1068,12 +1088,12 @@ LE47A	LD A,(IY+$01)
 	LD A,E	
 	CP L	
 	JR NZ,LE4AB	
-	LD HL,(LDE5B)	
-	LD BC,$00C8	
+	LD HL,(LDE5B)	; get Oxygen level
+	LD BC,$00C8	; 200
 	ADD HL,BC	
 	JR NC,LE4A5	
 	LD HL,$FFFF	
-LE4A5	CALL LDE5D	
+LE4A5	CALL LDE5D	; Update Oxygen indicator
 	JP LE418	
 LE4AB	LD BC,$0004	
 	ADD IY,BC	
@@ -1108,7 +1128,7 @@ LE4C3	BIT 6,(IX+$10)
 	LD B,$00	
 	ADD HL,BC	
 	PUSH DE	
-	CALL LE5D2	
+	CALL LE5D2	; DE = (L5B33) - HELD
 	LD C,(HL)	
 	INC HL	
 	LD B,(HL)	
@@ -1123,13 +1143,13 @@ LE4C3	BIT 6,(IX+$10)
 	JR Z,LE4FB	
 	JR C,LE533	
 	JR LE509	
-LE4FB	LD BC,(L5B33)	
-	LD (LDEFF),BC	
+LE4FB	LD BC,(L5B33)	; get value 25 / 50 / 75 / 100 depending of game level
+	LD (LDEFF),BC	; set HELD value
 	SET 6,(IX+$10)	
 	JR LE510	
-LE509	LD HL,(LDEFF)	
+LE509	LD HL,(LDEFF)	; get HELD value
 	ADD HL,BC	
-	LD (LDEFF),HL	
+	LD (LDEFF),HL	; set HELD value
 LE510	POP DE	
 	EX DE,HL	
 	CALL LA14C	; Get screen attribute address
@@ -1140,7 +1160,7 @@ LE510	POP DE
 	LD A,(BC)	
 	SET 3,A	
 	LD (BC),A	
-	CALL LDEF1	
+	CALL LDEF1	; Print HELD number
 	CALL LE615	; Make sound
 	LD HL,L5B0F	
 	INC (HL)	
@@ -1158,12 +1178,12 @@ LE533	PUSH BC
 	INC DE	
 	LD A,H	
 	LD (DE),A	
-	LD HL,(L5B33)	
-	LD (LDEFF),HL	
+	LD HL,(L5B33)	; get value 25 / 50 / 75 / 100 depending of game level
+	LD (LDEFF),HL	; set HELD value
 	SET 6,(IX+$10)	
 	POP DE	
 	POP BC	
-	CALL LDEF1	
+	CALL LDEF1	; Print HELD number
 	CALL LE615	; Make sound
 	JP LE418	
 LE553	BIT 1,A	
@@ -1186,19 +1206,19 @@ LE578	LD A,(BC)
 	BIT 4,A	
 	JP NZ,LE418	
 	PUSH BC	
-	CALL LE5D2	
+	CALL LE5D2	; DE = (L5B33) - HELD
 	POP BC	
 	EX DE,HL	
 	OR A	
 	SBC HL,DE	
 	JP C,LE418	
-	LD HL,(LDEFF)	
+	LD HL,(LDEFF)	; get HELD value
 	ADD HL,DE	
-	LD (LDEFF),HL	
+	LD (LDEFF),HL	; set HELD value
 	LD A,(BC)	
 	SET 4,A	
 	LD (BC),A	
-	CALL LDEF1	
+	CALL LDEF1	; Print HELD number
 	CALL LE615	; Make sound
 	LD HL,L5B00	
 	DEC (HL)	
@@ -1229,16 +1249,18 @@ LE5BB	LD A,(BC)
 	LD HL,(L5B29)	; get value 5 / 10 / 15 / 20, depending on Game level
 	JR LE578	
 
-LE5D2	LD BC,(LDEFF)	
-	LD DE,(L5B33)	
+; DE = (L5B33) - HELD
+LE5D2	LD BC,(LDEFF)	; get HELD value
+	LD DE,(L5B33)	; get value 25 / 50 / 75 / 100 depending of game level
 	EX DE,HL	
 	OR A	
 	SBC HL,BC	
-	EX DE,HL	
+	EX DE,HL	; DE = (L5B33) - HELD
 	RET
 
-LE5E0	DEFB $10,$27,$E8,$03,$64,$00,$0A,$00	
-	DEFB $01,$00,$FF,$FF
+; Dividers used to print decimal number
+LE5E0	DEFW $2710,$03E8,$0064,$000A,$0001	; 10000, 1000, 100, 10, 1
+	DEFB $FF,$FF
 
 ; Play melody
 ; I: HL = Melody address
@@ -1325,7 +1347,7 @@ LE69C	PUSH BC
 
 LE6AB	LD IX,LE33B	; Diver object record address
 	LD HL,$FFFF	
-	LD (LDE5B),HL	
+	LD (LDE5B),HL	; reset Oxygen level
 	LD A,(L5B37)	; get Number of lives
 	DEC A	
 	CALL LE682	
@@ -1335,7 +1357,7 @@ LE6AB	LD IX,LE33B	; Diver object record address
 	SRL A	
 	SRL A	
 	DEC A	
-	AND $1F	
+	AND $1F		; column 0..31
 	LD L,A	
 	LD H,$00	
 	LD (L5B03),HL	; set Screen position on mini-map
@@ -1462,7 +1484,7 @@ LE7F1	SET 1,(IX+$26)
 	LD A,(L5B10)	; Game level 1..4
 	LD C,A	
 	LD A,$05	
-	SUB C	
+	SUB C		; A = 5 - [Game level]
 	LD (IX+$1E),A	
 	LD (IX+$28),$07	
 	RES 3,(IX+$10)	
@@ -1492,7 +1514,7 @@ LE848	SET 1,(IX+$26)
 	LD A,(L5B10)	; Game level 1..4
 	LD C,A	
 	LD A,$05	
-	SUB C	
+	SUB C		; A = 5 - [Game level]
 	LD (IX+$1E),A	
 	LD (IX+$28),$07	
 	RES 3,(IX+$10)	
@@ -1501,7 +1523,7 @@ LE88A	LD (IX+$1E),$00
 	LD HL,LE632	
 	INC (HL)	
 	DEC HL	
-	DEC HL	
+	DEC HL		; HL = LE630
 	CALL LE5EC	; Play melody
 	LD A,(IX+$1A)	
 	CP $06	
@@ -1509,16 +1531,16 @@ LE88A	LD (IX+$1E),$00
 	LD A,(IX+$03)	
 	CP $07	
 	JR NZ,LE8FA	
-	LD HL,(LDEFF)	
-	LD DE,(L5B44)	
+	LD HL,(LDEFF)	; get HELD value
+	LD DE,(L5B44)	; get Score number
 	ADD HL,DE	
-	LD (L5B44),HL	
+	LD (L5B44),HL	; set Score number
 	LD HL,$0000	
-	LD (LDEFF),HL	
-	CALL LDEF1	
-	CALL LDEE5	
+	LD (LDEFF),HL	; reset HELD value
+	CALL LDEF1	; Print HELD number
+	CALL LDEE5	; Print score number
 	LD HL,$FFFF	
-	CALL LDE5D	
+	CALL LDE5D	; Update Oxygen indicator
 	RES 6,(IX+$10)	
 	RES 3,(IX+$26)	
 	RES 0,(IX+$26)	
@@ -1528,11 +1550,11 @@ LE88A	LD (IX+$1E),$00
 	LD A,(L5B0F)	
 	CP $03	
 	JR NZ,LE8FA	
-	LD HL,(L5B31)	
-	LD DE,(L5B44)	
+	LD HL,(L5B31)	; get value depending on game level
+	LD DE,(L5B44)	; get Score number
 	ADD HL,DE	
-	LD (L5B44),HL	
-	CALL LDEE5	
+	LD (L5B44),HL	; set Score number
+	CALL LDEE5	; Print score number
 	SET 4,(IX+$26)	
 	LD HL,LE638	
 	CALL LE5EC	; Play melody
@@ -1615,15 +1637,15 @@ LE97C	LD (IX+$00),C	; set Column value
 LE9B0	SET 5,(IX+$26)	
 	PUSH HL	
 	PUSH DE	
-	LD HL,(LDE59)	
-	LD (HL),$0D	
-	LD DE,$0040	
+	LD HL,(LDE59)	; get address in attributes for Lives indicator
+	LD (HL),$0D	; clean old value from the screen
+	LD DE,$0040	; 2 char lines lower
 	ADD HL,DE	
-	LD (LDE59),HL	
-	LD (HL),$4F	
-	LD HL,L5B37	; get Number of lives
+	LD (LDE59),HL	; set address in attributes for Lives indicator
+	LD (HL),$4F	; indicate new value
+	LD HL,L5B37	; address for Number of lives
 	LD A,(HL)	
-	INC (HL)	
+	INC (HL)	; one more lives
 	PUSH BC	
 	CALL LE682	
 	POP BC	
@@ -1632,29 +1654,30 @@ LE9B0	SET 5,(IX+$26)
 	RET
 
 LE9D1	DEFB $00,$00,$00,$00,$00,$00,$00	
-LE9D8	DEFB $00,$00,$44,$55,$52,$45,$4C,$4C,$00,$00,$00,$00,$0A,$00,$00,$00	
-	DEFB $00,$00,$44,$55,$52,$45,$4C,$4C,$00,$00,$00,$00,$0A,$00,$00,$00	
-	DEFB $00,$00,$44,$55,$52,$45,$4C,$4C,$00,$00,$00,$00,$0A,$00,$00,$00	
-	DEFB $00,$00,$44,$55,$52,$45,$4C,$4C,$00,$00,$00,$00,$0A,$00,$00,$00	
-	DEFB $00,$00,$44,$55,$52,$45,$4C,$4C,$00,$00,$00,$00,$0A,$00,$00,$00	
-	DEFB $00,$00,$44,$55,$52,$45,$4C,$4C,$00,$00,$00,$00,$0A,$00,$00,$00	
-	DEFB $00,$00,$44,$55,$52,$45,$4C,$4C,$00,$00,$00,$00,$0A,$00,$00,$00	
-	DEFB $00,$00,$44,$55,$52,$45,$4C,$4C,$00,$00,$00,$00,$0A,$00,$00,$00	
-	DEFB $00,$00,$44,$55,$52,$45,$4C,$4C,$00,$00,$00,$00,$0A,$00,$00,$00	
-	DEFB $00,$00,$44,$55,$52,$45,$4C,$4C,$00,$00,$00,$00
-LEA74	DEFB $0A,$00,$00,$00,$00,$00
+LE9D8	DEFB $00,$00
+; Score table, 160 bytes
+LE9DA	DEFB $44,$55,$52,$45,$4C,$4C,$00,$00,$00,$00,$0A,$00,$00,$00,$00,$00	
+	DEFB $44,$55,$52,$45,$4C,$4C,$00,$00,$00,$00,$0A,$00,$00,$00,$00,$00	
+	DEFB $44,$55,$52,$45,$4C,$4C,$00,$00,$00,$00,$0A,$00,$00,$00,$00,$00	
+	DEFB $44,$55,$52,$45,$4C,$4C,$00,$00,$00,$00,$0A,$00,$00,$00,$00,$00	
+	DEFB $44,$55,$52,$45,$4C,$4C,$00,$00,$00,$00,$0A,$00,$00,$00,$00,$00	
+	DEFB $44,$55,$52,$45,$4C,$4C,$00,$00,$00,$00,$0A,$00,$00,$00,$00,$00	
+	DEFB $44,$55,$52,$45,$4C,$4C,$00,$00,$00,$00,$0A,$00,$00,$00,$00,$00	
+	DEFB $44,$55,$52,$45,$4C,$4C,$00,$00,$00,$00,$0A,$00,$00,$00,$00,$00	
+	DEFB $44,$55,$52,$45,$4C,$4C,$00,$00,$00,$00,$0A,$00,$00,$00,$00,$00	
+LEA6A	DEFB $44,$55,$52,$45,$4C,$4C,$00,$00,$00,$00,$0A,$00,$00,$00,$00,$00
 
 LEA7A	LD (LE9D8),IX	
 	DI	
-	LD HL,(LE9D8+12)	
-	LD DE,(L5B44)	
+	LD HL,(LE9DA+10)	
+	LD DE,(L5B44)	; get Score number
 	LD A,E	
 	SUB L	
 	LD A,D	
 	SBC A,H	
 	JR C,LEADE	
 	EX DE,HL	
-	LD IX,LE9D8+2	
+	LD IX,LE9DA	
 	LD DE,$0010	
 	LD B,$0A	
 LEA96	LD A,L	
@@ -1669,17 +1692,17 @@ LEAA4	PUSH IX
 	OR A	
 	SBC HL,DE	
 	PUSH HL	
-	LD DE,LE9D8+2	
+	LD DE,LE9DA	
 	LD A,$0A	
 	SUB B	
 	ADD A,A	
 	ADD A,A	
 	ADD A,A	
-	ADD A,A	
+	ADD A,A		; *16
 	JR Z,LEABF	
 	LD C,A	
 	LD B,$00	
-	LD HL,LE9D8+18	
+	LD HL,LE9DA+16	
 	LDIR	
 LEABF	POP HL	
 	LD B,$06	
@@ -1696,7 +1719,7 @@ LEAC2	LD (HL),$80
 	INC HL	
 	LD (HL),B	
 	INC HL	
-	LD BC,(L5B44)	
+	LD BC,(L5B44)	; get Score number
 	LD (HL),C	
 	INC HL	
 	LD (HL),B	
@@ -1705,7 +1728,7 @@ LEADE	LD IX,LE33B	; Diver object record address
 	LD (IX+$1F),$07	
 	LD IX,(LE9D8)	
 	LD A,$0F	
-	LD ($5C8D),A	
+	LD ($5C8D),A	; set ATTR-P - Permanent current colours
 	LD A,$02	
 	CALL $1601	; ROM call CHAN-OPEN
 	LD A,$01	
@@ -1720,7 +1743,7 @@ LEADE	LD IX,LE33B	; Diver object record address
 	CALL $203C	; ROM call PR-STRING
 	LD B,$0A	
 	LD C,$05	
-	LD HL,LE9D8+146	
+	LD HL,LEA6A	; address of last line of the score table
 LEB16	PUSH BC	
 	BIT 7,(HL)	
 	JR Z,LEB20	
@@ -1791,7 +1814,7 @@ LEB90	LD A,(L5C05)
 LEB96	LD A,(L5C05)	
 	OR A	
 	JR Z,$EB96	
-	LD A,(L5C08)	
+	LD A,(L5C08)	; get LAST-K - Last key pressed
 	CP $0C	
 	JR Z,LEBB9	
 	CP $0D	
@@ -1849,6 +1872,7 @@ LEBDB	PUSH HL
 	POP HL	
 	RET	
 
+; Texts used for indicator panel
 LEBEE	DEFM $10,$07,$11,$01,$16,$01,$09	
 	DEFM "* SCUBA DIVE *"	
 	DEFM $10,$00,$11,$06,$16,$05,$00	
@@ -1861,7 +1885,7 @@ LEC53	DEFM $12,$01," ",$12,$00,$08
 LEC59	DEFM $16,$15,$01,$11,$01,$10,$06	
 LEC60	DEFM "ENTER SKILL (1TO4),K,L OR S."
 
-; Redefine keys ??
+; Redefine keys
 LEC7C	LD A,$02	
 	CALL $1601	; ROM call CHAN-OPEN
 	LD A,$04	
@@ -1869,17 +1893,17 @@ LEC7C	LD A,$02
 	LD A,$02	
 	CALL $1601	; ROM call CHAN-OPEN
 	LD A,$20	
-	LD (L5C8D),A	
+	LD (L5C8D),A	; set ATTR-P - Permanent current colours
 	CALL $0D6B	; ROM CLS subroutine
-	LD HL,$ED23	
-	LD (L5C7B),HL	
+	LD HL,LED23	; UDG symbols used for Redefine keys
+	LD (L5C7B),HL	; set UDG - Address of first user defined graphic
 	LD A,$02	
 	CALL $1601	; ROM call CHAN-OPEN
 LEC9E	CALL $02BF	; ROM call KEYBOARD
 	LD A,(L5C05)	
 	OR A	
 	JR NZ,LEC9E	
-	LD DE,LED43	
+	LD DE,LED43	; text for keys redefining
 	LD BC,$005F	
 	CALL $203C	; ROM call PR-STRING
 	CALL LECEB	; Sound
@@ -1888,7 +1912,7 @@ LEC9E	CALL $02BF	; ROM call KEYBOARD
 	LD BC,$0012	
 	CALL $203C	; ROM call PR-STRING
 	CALL LECEB	; Sound
-	LD (L5B3B),BC	
+	LD (L5B3B),BC	; set port for Anticlockwise key
 	LD (L5B3D),A	; Save key for Anticlockwise
 	LD BC,$0012	
 	CALL $203C	; ROM call PR-STRING
@@ -1942,10 +1966,12 @@ LED1C	IN A,(C)
 	LD A,L	
 	RET	
 
+; UDG symbols $90..$93 used for Redefine keys
 LED23	DEFB $18,$24,$42,$87,$87,$42,$20,$18	
 	DEFB $18,$20,$42,$87,$87,$42,$24,$18	
 	DEFB $08,$0C,$0E,$FF,$FF,$0E,$0C,$08	
 	DEFB $00,$00,$10,$30,$7E,$30,$10,$00	
+; Text for Redefine keys
 LED43	DEFB $10,$00,$11,$06,$16,$03,$05	
 	DEFM "                      "	
 	DEFB $16,$04,$05	
@@ -1970,9 +1996,9 @@ LEDD5	DEFB $12,$80,$01,$1E,$00,$01,$0C,$40
 LEDDF	LD A,$08	
 	LD (L5C6A),A	
 	LD A,$02	
-	CALL $1601	; ??
+	CALL $1601	; ROM call CHAN-OPEN
 	LD A,$0F	
-	LD (L5C8D),A	
+	LD (L5C8D),A	; set ATTR-P - Permanent current colours
 	LD HL,(L5C78)	
 	LD (L5B05),HL	
 	LD HL,L5B4D	
@@ -2004,7 +2030,7 @@ LEE2C	CALL LEEAD
 	EI	
 	OR A	
 	JR Z,LEE2C	
-	LD A,(L5C08)	
+	LD A,(L5C08)	; get LAST-K - Last key pressed
 	CP $4B		; 'K' ?
 	JR NZ,LEE45	
 	CALL LEC7C	; Redefine keys
@@ -2024,31 +2050,32 @@ LEE5A	LD A,(L5C05)
 LEE60	LD A,(L5C05)	
 	OR A	
 	JR NZ,LEE60	
-	LD A,(L5C08)	
+	LD A,(L5C08)	; get LAST-K - Last key pressed
 	CP $4E		; 'N' ?
 	JR Z,LEEA7	
 	CP $59		; 'Y' ?
 	JR NZ,LEE5A	
 	LD BC,$0000	
-	RET	
+	RET		; Returning to BASIC, loading score table
 LEE75	CP $53		; 'S' ?
 	JR NZ,LEE7D	
 	LD BC,$0001	
-	RET	
+	RET		; Returning to BASIC, saving score table
 LEE7D	SUB $31		; -'1'
 	JR C,LEE1C	
 	CP $04	
 	JR NC,LEE1C	
 	INC A		; 1..4
 	LD (L5B10),A	; Save game level 1..4
+; Game level selected, starting the game
 	LD HL,LEDD5	
 	CALL LE5EC	; Play melody
 	LD HL,$0000	
 	LD (L5B46),HL	
 	LD (L5B48),HL	
-	LD HL,(LEA74)	
-	LD (L5B4B),HL	
-	CALL LD990	
+	LD HL,(LEA6A+10)	; get High Score value from the score table
+	LD (L5B4B),HL	; set High Score value for indicator
+	CALL LD990	; Game
 	CALL LEA7A	
 	JP LEE1C	
 LEEA7	CALL LEADE	

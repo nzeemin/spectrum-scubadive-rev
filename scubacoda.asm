@@ -36,12 +36,14 @@ L5B1F	DEFW $0000	; ???
 L5B21	DEFW $0000	; ???
 L5B23	DEFW $0000	; ???
 L5B25	DEFW $0001	; Value 150 / 100 / 50 / 1, depending on Game level 1..4
-L5B27	DEFW $0000	; 14 bytes copied from DDF0 + ([Game level] - 1) * 16
+; 14 bytes copied from DDF0 + ([Game level] - 1) * 16
+L5B27	DEFW $0000
 L5B29	DEFW $0000
 L5B2B	DEFW $0000,$0000
 L5B2F	DEFW $0000
 L5B31	DEFW $0000
 L5B33	DEFW $0000	; ???
+;
 L5B35	DEFW $DF45	; ???
 L5B37	DEFB $03	; Number of lives
 L5B38	DEFW $FEFE	; Port for Clockwise key
@@ -52,11 +54,11 @@ L5B3E	DEFW $7FFE	; Port for Accelerate key
 L5B40	DEFB $01	; Bit mask for Accelerate key
 L5B41	DEFW $7FFE	; Port for Decelerate key
 L5B43	DEFB $02	; Bit mask for Decelerate key
-L5B44	DEFW $03E8	; ???
+L5B44	DEFW $03E8	; Score value
 L5B46	DEFW $0000	; ??? $0000 at game start
 L5B48	DEFW $0000	; ??? $0000 at game start
 L5B4A	DEFB $00	; Screen attribute, see routine DA39
-L5B4B	DEFW $0000	; ???
+L5B4B	DEFW $0000	; High score value
 
 ;----------------------------------------------------------------------------
 
