@@ -45,15 +45,15 @@ The reversed code structure:
    - <code>scubarelf.dat</code> - relief tiles and world mini-map
  - <code>scubacodc.asm</code> - block $D900-$F0FF
 
-All three code .asm code files are compiled with pasmo cross-assembler, and compared to original binary blocks byte-to-byte, no differences.
+All three .asm code files are compiled with pasmo cross-assembler, and compared to original binary blocks byte-to-byte, no differences.
 
 
 ## The game map
 
 The game labyrinth "warped up":
-first, the AC5D table (the "mini-map") contains 32x32 = 256 block indices;
+first, the AC5D table (the "mini-map") contains 32x32 = 1024 block indices;
 second, blocks at A4DD contains 8x8 tiles each;
-and finally, tiles at 9134 are 8x8 pixels each.
+and finally, tiles at 9134 are 8x8 pixels each.<br>
 So the whole world is 256x256 tiles = 2048x2048 pixels.
 We always see only 24x24 tiles on the screen.
 
@@ -72,6 +72,7 @@ So when we need an Octopus, we just put blocks number $1C and $1D next to each o
 
  - `pasmo.exe` cross-assembler
    http://pasmo.speccy.org/
+
 
 ## Links
 

@@ -243,7 +243,7 @@ LAC1D	DEFB $00,$00,$00,$00,$00,$00,$00,$1A	 ; $1D place for Octupus, right block
 	DEFB $32,$32,$32,$32,$32,$32,$0D,$01
 	DEFB $00,$32,$32,$32,$32,$00,$00,$0C
 
-; Relief mini-map 32x32 = 256 bytes
+; Relief mini-map 32x32 = 1024 bytes
 ; Each byte is relief block number (see A4DD), each relief block is 8x8 tiles, and tiles are 8x8 pixels.
 ; So this mini-map defines the world of 256x256 tiles, or 2048 x 2048 pixels.
 MiniMap

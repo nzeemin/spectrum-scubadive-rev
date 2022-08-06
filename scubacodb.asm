@@ -36,7 +36,7 @@ L9C69	PUSH BC
 L9C6C	PUSH BC	
 	PUSH IX	
 	EX DE,HL	; now HL = screen position, DE = address on the screen
-	CALL L9D56	; Calc address in MiniMap and Get block number
+	CALL MiniMap_Get	; Calc address in MiniMap and Get block number
 	PUSH AF	
 	EX DE,HL	
 	CP $1C		; place for Octopus?
@@ -161,7 +161,8 @@ L9D3C	CALL LB0A9	; Draw static objects on the screen; prepare LB07D table
 ; Calculate address in the MiniMap table
 ; I: HL	H = row, L = column 0..31
 ; O: HL = address in the MiniMap table
-L9D40	LD A,L	
+MiniMap_Addr
+	LD A,L	
 	LD L,$00	
 	SRL H	
 	RR L	
@@ -178,10 +179,11 @@ L9D40	LD A,L
 ; Calculate address in the MiniMap table and Get block number
 ; I: H = row, L = column 0..31
 ; O: A = value
-L9D56	PUSH HL	
+MiniMap_Get
+	PUSH HL	
 	PUSH DE	
-	CALL L9D40	; Calculate address in the MiniMap table
-	LD A,(HL)	; get value
+	CALL MiniMap_Addr	; Calculate address in the MiniMap table
+	LD A,(HL)		; get value
 	POP DE	
 	POP HL	
 	RET
@@ -191,15 +193,16 @@ L9D56	PUSH HL
 ; If column or row is out of range 0..31 - returns flag Z=0;
 ; else, gets value from MiniMap table;
 ; if this value is $01, returns flag Z=1, in other case flag Z=0.
-L9D5F	PUSH HL	
+MiniMap_Check
+	PUSH HL	
 	PUSH AF	
 	LD A,L	
-	AND $E0		; check Column for range 0..31
+	AND $E0			; check Column for range 0..31
 	JR NZ,L9D73	
 	LD A,H	
-	AND $E0		; check Row for range 0..31
+	AND $E0			; check Row for range 0..31
 	JR NZ,L9D73	
-	CALL L9D56	; Calc address in MiniMap and Get block number
+	CALL MiniMap_Get	; Calc address in MiniMap and Get block number
 	LD L,A	
 	POP AF	
 	DEC L	
@@ -213,10 +216,11 @@ L9D73	POP AF
 
 ; Calculate address in the MiniMap table and Set block number
 ; I: H = row, L = column 0..31, A = value to set
-L9D79	PUSH HL	
+MiniMap_Set
+	PUSH HL	
 	PUSH DE	
 	PUSH AF	
-	CALL L9D40	; Calculate address in the MiniMap table
+	CALL MiniMap_Addr	; Calculate address in the MiniMap table
 	POP AF	
 	LD (HL),A	; set value
 	POP DE	
@@ -266,129 +270,129 @@ PrepareMiniMap
 	LD HL,MiniMap+3*32+2	; $ACBF = $AC5D + 3 * 32 + 2: row 3 column 2
 	LD B,$1C	
 	LD A,$16	
-	CALL L9DA5	; Fill block at $ACBF with $16
-	LD (HL),$06	; ($ACDB) <- $06
-	INC HL		; HL = $ACDC
+	CALL L9DA5		; Fill block at $ACBF with $16
+	LD (HL),$06		; ($ACDB) <- $06
+	INC HL			; HL = $ACDC
 	LD B,$22	
 	LD A,$01	
-	CALL L9DA5	; Fill block at $ACDC with $01
-	INC HL		; HL = $ACFF
+	CALL L9DA5		; Fill block at $ACDC with $01
+	INC HL			; HL = $ACFF
 	LD A,$1A	
 	LD B,$1C	
-	CALL L9DA5	; Fill block at $ACFF with $1A
+	CALL L9DA5		; Fill block at $ACFF with $1A
 	INC HL	
 	INC HL	
 	LD (HL),$02	
 	LD HL,MiniMap+6*32+31	; $AD3C = $AC5D + 6 * 32 + 31; row 6 column 31
-	LD (HL),$06	; ($AD3C) <- $06
+	LD (HL),$06		; ($AD3C) <- $06
 	INC HL	
 	INC HL	
-	INC HL		; HL = $AD3F
+	INC HL			; HL = $AD3F
 	LD B,$1C	
 	LD A,$16	
-	CALL L9DA5	; Fill block at $AD3F with $16
+	CALL L9DA5		; Fill block at $AD3F with $16
 	INC HL	
-	INC HL		; HL = $AD5D; $AD5D = $AC5D + $100: row 8 column 0
+	INC HL			; HL = $AD5D; $AD5D = $AC5D + $100: row 8 column 0
 	LD B,$00	
 	LD A,$01	
-	CALL L9DA5	; Fill block at $AD5D with $01, 256 bytes: fill rows 8..15
-	CALL L9DA5	; Fill block at $AE5D with $01, 256 bytes: fill rows 16..23
-	CALL L9DA5	; Fill block at $AF5D with $01, 256 bytes: fill rows 24..31
-	CALL NextRandom	; Random
+	CALL L9DA5		; Fill block at $AD5D with $01, 256 bytes: fill rows 8..15
+	CALL L9DA5		; Fill block at $AE5D with $01, 256 bytes: fill rows 16..23
+	CALL L9DA5		; Fill block at $AF5D with $01, 256 bytes: fill rows 24..31
+	CALL NextRandom		; Random
 	LD A,H	
-	AND $0F		; 0..15
-	ADD A,$07	; A = (Random:H) & 15 + 7 => 7..22
-	LD L,A		; column
-	LD H,$03	; row = 3
+	AND $0F			; 0..15
+	ADD A,$07		; A = (Random:H) & 15 + 7 => 7..22
+	LD L,A			; column
+	LD H,$03		; row = 3
 	XOR A	
-	CALL L9D79	; Calc address in MiniMap and Set block number = 0
-	INC L		; next column; column = 4
-	CALL L9D79	; Calc address in MiniMap and Set block number = 0
-	LD H,$05	; row = 5
-	CALL L9D79	; Calc address in MiniMap and set block number = 0
-	DEC L		; previous column; column = 3
-	CALL L9D79	; Calc address in MiniMap and Set block number = 0
-	DEC H		; previous row; row = 4
-	LD A,$1C	; $1C = place for Octopus, left block
-	CALL L9D79	; Calc address in MiniMap and Set block number = $1C
-	INC A		; = $1D = place for Octopus, right block
-	INC L		; next column; column = 4
-	CALL L9D79	; Calc address in MiniMap and Set block number = $1D
+	CALL MiniMap_Set	; Calc address in MiniMap and Set block number = 0
+	INC L			; next column; column = 4
+	CALL MiniMap_Set	; Calc address in MiniMap and Set block number = 0
+	LD H,$05		; row = 5
+	CALL MiniMap_Set	; Calc address in MiniMap and set block number = 0
+	DEC L			; previous column; column = 3
+	CALL MiniMap_Set	; Calc address in MiniMap and Set block number = 0
+	DEC H			; previous row; row = 4
+	LD A,$1C		; $1C = place for Octopus, left block
+	CALL MiniMap_Set	; Calc address in MiniMap and Set block number = $1C
+	INC A			; = $1D = place for Octopus, right block
+	INC L			; next column; column = 4
+	CALL MiniMap_Set	; Calc address in MiniMap and Set block number = $1D
 	LD HL,MiniMap+3*32	; $ACBD = $AC5D + 3 * 32: row 3 column 0
-	LD B,$A0	; repeat 160 times = 5 rows, rows 3..7
-L9E14	LD A,(HL)	; get block number
-	CP $02		; block $02 is dead end to the left, exit to the right
+	LD B,$A0		; repeat 160 times = 5 rows, rows 3..7
+L9E14	LD A,(HL)		; get block number
+	CP $02			; block $02 is dead end to the left, exit to the right
 	JR Z,L9E2A	
-	CP $06		; block $06 is dead end to the right, exit to the left
+	CP $06			; block $06 is dead end to the right, exit to the left
 	JR Z,L9E2A	
-	CP $16		; block $16 looks like floor (seabed)
+	CP $16			; block $16 looks like floor (seabed)
 	JR Z,L9E2A	
-	CP $1A		; block $1A looks like ceiling
+	CP $1A			; block $1A looks like ceiling
 	JR Z,L9E2A	
-L9E25	INC HL		; to the next block
+L9E25	INC HL			; to the next block
 	DJNZ L9E14	
 	JR L9E38	
 ; Block $02 / $06 / $16 / $1A
 L9E2A	PUSH BC	
 	PUSH HL	
-	CALL NextRandom	; Random
+	CALL NextRandom		; Random
 	BIT 5,H	
 	POP HL	
 	POP BC	
 	JR Z,L9E25	
-	INC (HL)	; increase block number
-	JR L9E25	; continue the loop
+	INC (HL)		; increase block number
+	JR L9E25		; continue the loop
 ; Coming here after the loop end; continue to build the map
-L9E38	LD A,$02	; initial trunk width
-	LD (L5B09),A	; set trunk width
-	CALL NextRandom	; Random
+L9E38	LD A,$02		; initial trunk width
+	LD (L5B09),A		; set trunk width
+	CALL NextRandom		; Random
 	LD A,H	
-	AND $0F		; 0..15
-	ADD A,$07	; 7..22
+	AND $0F			; 0..15
+	ADD A,$07		; 7..22
 	LD L,A	
-	LD H,$07	; row = 7
+	LD H,$07		; row = 7
 	XOR A	
-	CALL L9D79	; Calc address in MiniMap and Set block number = 0
-	INC L		; next column
-	CALL L9D79	; Calc address in MiniMap and Set block number = 0
-	INC H		; next row
-	LD A,$1D	; $1D = place for Octopus, right block
-	CALL L9D79	; Calc address in MiniMap and Set block number = $1D - Octopus place
-	DEC A		; = $1C = place for Octopus, left block
-	DEC L		; previous column
-	CALL L9D79	; Calc address in MiniMap and Set block number = $1C - Octopus place
-	DEC L		; previous column
+	CALL MiniMap_Set	; Calc address in MiniMap and Set block number = 0
+	INC L			; next column
+	CALL MiniMap_Set	; Calc address in MiniMap and Set block number = 0
+	INC H			; next row
+	LD A,$1D		; $1D = place for Octopus, right block
+	CALL MiniMap_Set	; Calc address in MiniMap and Set block number = $1D - Octopus place
+	DEC A			; = $1C = place for Octopus, left block
+	DEC L			; previous column
+	CALL MiniMap_Set	; Calc address in MiniMap and Set block number = $1C - Octopus place
+	DEC L			; previous column
 ; Building the labyrinth down from the hole with Octopus
-	LD (L5B07),HL	; store the octopus place as the current trunk position
-L9E5F	LD HL,(L5B07)	; get current trunk position
-	INC H		; next row
-	LD (L5B07),HL	; set current trunk position
-	LD A,(L5B09)	; get trunk width
-	LD (L5B0A),A	; and save it
-	LD A,(LEVEL)	; Game level 1..4
-	ADD A,A		; *2
-	ADD A,A		; *4
-	ADD A,$10	; now A = [Game level] * 4 + 16 => 20 / 24 / 28 / 32
+	LD (L5B07),HL		; store the octopus place as the current trunk position
+L9E5F	LD HL,(L5B07)		; get current trunk position
+	INC H			; next row
+	LD (L5B07),HL		; set current trunk position
+	LD A,(L5B09)		; get trunk width
+	LD (L5B0A),A		; and save it
+	LD A,(LEVEL)		; Game level 1..4
+	ADD A,A			; *2
+	ADD A,A			; *4
+	ADD A,$10		; now A = [Game level] * 4 + 16 => 20 / 24 / 28 / 32
 	LD C,A	
-	DEC C		; now C = 19 / 23 / 27 / 31 - row where the labirinth ends
-	CP H		; row = A ?
-	JR NZ,L9E99	; no => jump
+	DEC C			; now C = 19 / 23 / 27 / 31 - row where the labirinth ends
+	CP H			; row = A ?
+	JR NZ,L9E99		; no => jump
 ; The labyrinth ends on this depth	
-	DEC H		; previous row
-	LD A,(L5B09)	; get trunk width
-	LD B,A		; B = loop counter
+	DEC H			; previous row
+	LD A,(L5B09)		; get trunk width
+	LD B,A			; B = loop counter
 L9E7D	PUSH HL	
 	PUSH BC	
-	CALL NextRandom	; Random
+	CALL NextRandom		; Random
 	LD D,H	
 	POP BC	
 	POP HL	
-	INC L		; next column
-	LD A,$16	; block $16 is floor (seabed)
+	INC L			; next column
+	LD A,$16		; block $16 is floor (seabed)
 	BIT 1,D	
 	JR Z,L9E8D	
-	INC A		; change to block $17 - a bit different floor (seabed)
-L9E8D	CALL L9D79	; Calc address in MiniMap and Set block number
+	INC A			; change to block $17 - a bit different floor (seabed)
+L9E8D	CALL MiniMap_Set	; Calc address in MiniMap and Set block number
 	DJNZ L9E7D	
 	CALL LA193	
 	CALL LB1D4	
@@ -407,7 +411,7 @@ L9EA6	LD A,$02	; block $02 is dead end to the left, exit to the right
 	BIT 6,D	
 	JR Z,L9EAD	
 	INC A		; change to block $03, same as $02 with a bit different relief
-L9EAD	CALL L9D79	; Calc address in MiniMap and Set block number
+L9EAD	CALL MiniMap_Set	; Calc address in MiniMap and Set block number
 	JP L9F0E
 L9EB3	LD A,E	
 	AND $C0	
@@ -421,7 +425,7 @@ L9EB8	BIT 4,E
 	CP C	
 	JR Z,L9ED8	
 	LD A,$05	; block $05 is wall to left/up, exit to right/down
-	CALL L9D79	; Calc address in MiniMap and Set block number
+	CALL MiniMap_Set	; Calc address in MiniMap and Set block number
 	DEC L		; previous column
 	LD (L5B07),HL	; set current trunk position
 	INC L		; next column
@@ -443,16 +447,16 @@ L9ED8	LD A,(L5B09)	; get trunk width
 	INC L		; next column
 	LD (L5B07),HL	; set current trunk position
 	LD A,$04	; block $04 is wall to left/down, exit to rigth/up
-	CALL L9D79	; Calc address in MiniMap and Set block number
+	CALL MiniMap_Set	; Calc address in MiniMap and Set block number
 	JR L9F0E	
 L9EFB	DEC L		; previous column
-	CALL L9D5F	; Check value in MiniMap table
+	CALL MiniMap_Check	; Check value in MiniMap table
 	PUSH AF	
 	INC L		; next column
 	POP AF	
 	JR NZ,L9EB8	
 	LD A,$0B	; block $0B is floor and ceiling, passage to left/right
-	CALL L9D79	; Calc address in MiniMap and Set block number = $0B
+	CALL MiniMap_Set	; Calc address in MiniMap and Set block number = $0B
 	PUSH BC	
 	CALL L9F81	
 	POP BC	
@@ -460,7 +464,7 @@ L9F0E	LD A,(L5B09)	; get trunk width
 	LD B,A		; B = loop counter
 	XOR A	
 L9F13	INC L		; next column
-	CALL L9D79	; Calc address in MiniMap and Set block number = 0
+	CALL MiniMap_Set	; Calc address in MiniMap and Set block number = 0
 	DJNZ L9F13	
 	INC L		; next column
 	PUSH HL	
@@ -476,7 +480,7 @@ L9F27	LD A,$06	; block $06 is dead end to the right, exit to the left
 	BIT 6,D	
 	JR NZ,L9F2E	
 	INC A		; change to block $07 - same as $06 with a bit different relief
-L9F2E	CALL L9D79	; Calc address in MiniMap and Set block number
+L9F2E	CALL MiniMap_Set	; Calc address in MiniMap and Set block number
 	JP L9F78	
 L9F34	LD A,E	
 	AND $C0	
@@ -489,7 +493,7 @@ L9F39	BIT 4,E
 	LD (L5B0A),A	
 	DEC L	
 	LD A,$08	; block $08 is wall to right/down, exit to left/up
-	CALL L9D79	; Calc address in MiniMap and Set block number = $08
+	CALL MiniMap_Set	; Calc address in MiniMap and Set block number = $08
 	JP L9F78	
 L9F4F	LD A,L	
 	CP $1E	
@@ -498,19 +502,19 @@ L9F4F	LD A,L
 	CP C	
 	JR Z,L9F27	
 	LD A,$09	; block $09 is wall to right/up, exit to left/down
-	CALL L9D79	; Calc address in MiniMap and Set block number = $09
+	CALL MiniMap_Set	; Calc address in MiniMap and Set block number = $09
 	LD A,(L5B0A)	
 	INC A	
 	LD (L5B0A),A	
 	JP L9F78	
 L9F67	INC L		; next column
-	CALL L9D5F	; Check value in MiniMap table
+	CALL MiniMap_Check	; Check value in MiniMap table
 	PUSH AF	
 	DEC L		; previous column
 	POP AF	
 	JR NZ,L9F39	
 	LD A,$0A	; block $0A is floor and ceiling, passage to left/right
-	CALL L9D79	; Calc address in MiniMap and Set block number = $0A
+	CALL MiniMap_Set	; Calc address in MiniMap and Set block number = $0A
 	CALL LA03B	
 L9F78	LD A,(L5B0A)	
 	LD (L5B09),A	; restore trunk width
@@ -526,91 +530,91 @@ L9F84	DEC L
 	AND $02		; check bit 1
 	JR NZ,L9FEB	
 L9F90	DEC L	
-	CALL L9D5F	; Check value in MiniMap table
+	CALL MiniMap_Check	; Check value in MiniMap table
 	JR Z,L9FC0	
 	LD A,L	
 	CP $FF	
 	JR NZ,L9FB6	
 	LD L,$1F	
-	CALL L9D56	; Calc address in MiniMap and Get block number
+	CALL MiniMap_Get	; Calc address in MiniMap and Get block number
 	CP $14	
 	JR NZ,L9FB4	
 	LD A,$0B	
-	CALL L9D79	; Calc address in MiniMap and Set block number
+	CALL MiniMap_Set	; Calc address in MiniMap and Set block number
 	LD L,$00	
 	LD A,$0A	
-	CALL L9D79	; Calc address in MiniMap and Set block number
+	CALL MiniMap_Set	; Calc address in MiniMap and Set block number
 	LD HL,(L5B01)	
 	RET	
 L9FB4	LD L,$FF	
 L9FB6	INC L	
 	LD A,$15	
-	CALL L9D79	; Calc address in MiniMap and Set block number
+	CALL MiniMap_Set	; Calc address in MiniMap and Set block number
 	LD HL,(L5B01)	
 	RET	
 L9FC0	INC L	
 	BIT 7,E	
 	JR Z,L9FE0	
 	DEC H	
-	CALL L9D56	; Calc address in MiniMap and Get block number
+	CALL MiniMap_Get	; Calc address in MiniMap and Get block number
 	INC H	
 	SUB $10	
 	JR C,L9FE0	
 	CP $04	
 	JR NC,L9FE0	
 	LD A,$18	
-	CALL L9D79	; Calc address in MiniMap and Set block number
+	CALL MiniMap_Set	; Calc address in MiniMap and Set block number
 	DEC H	
 	INC A	
-	CALL L9D79	; Calc address in MiniMap and Set block number
+	CALL MiniMap_Set	; Calc address in MiniMap and Set block number
 	INC H	
 	JP L9F84	
 L9FE0	LD A,D	
 	AND $03		; 0..3
 	ADD A,$10	; $10..$13
-	CALL L9D79	; Calc address in MiniMap and Set block number
+	CALL MiniMap_Set	; Calc address in MiniMap and Set block number
 	JP L9F84	
 L9FEB	BIT 6,E	
 	JR NZ,LA011	
 	INC H	
-	CALL L9D5F	; Check value in MiniMap table
+	CALL MiniMap_Check	; Check value in MiniMap table
 	JR Z,L9FF8	
 	DEC H	
 	JR L9F90	
 L9FF8	DEC L	
-	CALL L9D5F	; Check value in MiniMap table
+	CALL MiniMap_Check	; Check value in MiniMap table
 	JR Z,LA002	
 	INC L	
 	DEC H	
 	JR L9F90	
 LA002	INC L	
 	LD A,$0D	
-	CALL L9D79	; Calc address in MiniMap and Set block number
+	CALL MiniMap_Set	; Calc address in MiniMap and Set block number
 	DEC H	
 	DEC A	
-	CALL L9D79	; Calc address in MiniMap and Set block number
+	CALL MiniMap_Set	; Calc address in MiniMap and Set block number
 	INC H	
 	JP L9F84	
 LA011	LD A,$09	
 	CP H	
 	JP Z,L9F90	
 	DEC H	
-	CALL L9D5F	; Check value in MiniMap table
+	CALL MiniMap_Check	; Check value in MiniMap table
 	JR Z,LA021	
 	INC H	
 	JP L9F90	
 LA021	DEC L	
-	CALL L9D5F	; Check value in MiniMap table
+	CALL MiniMap_Check	; Check value in MiniMap table
 	JR Z,LA02C	
 	INC L	
 	INC H	
 	JP L9F90	
 LA02C	LD A,$0E	
 	INC L	
-	CALL L9D79	; Calc address in MiniMap and Set block number
+	CALL MiniMap_Set	; Calc address in MiniMap and Set block number
 	INC H	
 	INC A	
-	CALL L9D79	; Calc address in MiniMap and Set block number
+	CALL MiniMap_Set	; Calc address in MiniMap and Set block number
 	DEC H	
 	JP L9F84	
 
@@ -624,96 +628,96 @@ LA03E	INC L
 	AND $04		; check bit 2
 	JR NZ,LA0A5	
 LA04A	INC L	
-	CALL L9D5F	; Check value in MiniMap table
+	CALL MiniMap_Check	; Check value in MiniMap table
 	JR Z,LA079	
 	LD A,L	
 	AND $1F		; 0..31
 	JR NZ,LA06F	
 	LD L,A	
-	CALL L9D56	; Calc address in MiniMap and Get block number
+	CALL MiniMap_Get	; Calc address in MiniMap and Get block number
 	CP $15	
 	JR NZ,LA06D	
 	LD A,$0A	
-	CALL L9D79	; Calc address in MiniMap and Set block number
+	CALL MiniMap_Set	; Calc address in MiniMap and Set block number
 	LD L,$1F	
 	LD A,$0B	
-	CALL L9D79	; Calc address in MiniMap and Set block number
+	CALL MiniMap_Set	; Calc address in MiniMap and Set block number
 	LD HL,(L5B01)	
 	RET	
 LA06D	LD L,$20	
 LA06F	DEC L	
 	LD A,$14	
-	CALL L9D79	; Calc address in MiniMap and Set block number
+	CALL MiniMap_Set	; Calc address in MiniMap and Set block number
 	LD HL,(L5B01)	
 	RET	
 LA079	DEC L	
 	BIT 7,E	
 	JR Z,LA09A	
 	DEC H	
-	CALL L9D56	; Calc address in MiniMap and Get block number
+	CALL MiniMap_Get	; Calc address in MiniMap and Get block number
 	INC H	
 	SUB $10	
 	JR C,LA09A	
 	CP $04	
 	JR NC,LA09A	
 	LD A,$18	
-	CALL L9D79	; Calc address in MiniMap and Set block number
+	CALL MiniMap_Set	; Calc address in MiniMap and Set block number
 	DEC H	
 	LD A,$19	
-	CALL L9D79	; Calc address in MiniMap and Set block number
+	CALL MiniMap_Set	; Calc address in MiniMap and Set block number
 	INC H	
 	JP LA03E	
 LA09A	LD A,D	
 	AND $03		; 0..3
 	ADD A,$10	; $10..$13
-	CALL L9D79	; Calc address in MiniMap and Set block number
+	CALL MiniMap_Set	; Calc address in MiniMap and Set block number
 	JP LA03E	
 LA0A5	BIT 6,E	
 	JR NZ,LA0CB	
 	INC H	
-	CALL L9D5F	; Check value in MiniMap table
+	CALL MiniMap_Check	; Check value in MiniMap table
 	JR Z,LA0B2	
 	DEC H	
 	JR LA04A	
 LA0B2	INC L	
-	CALL L9D5F	; Check value in MiniMap table
+	CALL MiniMap_Check	; Check value in MiniMap table
 	JR Z,LA0BC	
 	DEC L	
 	DEC H	
 	JR LA04A	
 LA0BC	DEC L	
 	LD A,$0F	
-	CALL L9D79	; Calc address in MiniMap and Set block number
+	CALL MiniMap_Set	; Calc address in MiniMap and Set block number
 	DEC H	
 	DEC A	
-	CALL L9D79	; Calc address in MiniMap and Set block number
+	CALL MiniMap_Set	; Calc address in MiniMap and Set block number
 	INC H	
 	JP LA03E	
 LA0CB	LD A,$09	
 	CP H	
 	JP Z,LA04A	
 	DEC H	
-	CALL L9D5F	; Check value in MiniMap table
+	CALL MiniMap_Check	; Check value in MiniMap table
 	JR Z,LA0DB	
 	INC H	
 	JP LA04A	
 LA0DB	INC L	
-	CALL L9D5F	; Check value in MiniMap table
+	CALL MiniMap_Check	; Check value in MiniMap table
 	JR Z,LA0E6	
 	INC H	
 	DEC L	
 	JP LA04A	
 LA0E6	LD A,$0C	
 	DEC L	
-	CALL L9D79	; Calc address in MiniMap and Set block number
+	CALL MiniMap_Set	; Calc address in MiniMap and Set block number
 	INC H	
 	INC A	
-	CALL L9D79	; Calc address in MiniMap and Set block number
+	CALL MiniMap_Set	; Calc address in MiniMap and Set block number
 	DEC H	
 	JP LA03E	
 
-; Calculate address ???
-; I: HL = Char coords: H = row, L = column 0..31
+; Calculate address in relief block
+; I: HL = Char coords: H = row, L = column
 LA0F5	PUSH HL
 	SRL H
 	SRL H
@@ -725,13 +729,13 @@ LA0F5	PUSH HL
 	SRL H
 	RR L
 	LD DE,MiniMap	
-	ADD HL,DE	
-	LD H,(HL)	
-	POP DE	
-	LD A,E	
+	ADD HL,DE	; now HL = address in MiniMap
+	LD H,(HL)	; get block number from MiniMap
+	POP DE		; restore row/column
+	LD A,E		; get column
 	AND $07		; 0..7
 	LD E,A	
-	LD A,D	
+	LD A,D		; get row
 	RRCA	
 	RRCA	
 	RRCA	
@@ -744,16 +748,16 @@ LA0F5	PUSH HL
 	LD A,L	
 	OR E	
 	LD L,A	
-	LD DE,LA4DD	
-	ADD HL,DE	
+	LD DE,LA4DD	; address of relief bblocks
+	ADD HL,DE	; now HL = address in the block
 	RET	
 
-; Calculate address and Get ???
-; I: HL = Char coords: H = row, L = column 0..31
+; Calculate address in relief block and Get tile nummber
+; I: HL = Char coords: H = row, L = column
 LA129	PUSH HL	
 	PUSH DE	
-	CALL LA0F5	
-	LD A,(HL)	
+	CALL LA0F5	; Calculate address in relief block
+	LD A,(HL)	; get tile number
 	POP DE	
 	POP HL	
 	RET
@@ -844,7 +848,7 @@ LA1A2	INC L
 	LD A,$80	; end of list marker
 	LD (DE),A	
 	RET	
-LA1B0	CALL L9D56	; Calc address in MiniMap and Get block number
+LA1B0	CALL MiniMap_Get	; Calc address in MiniMap and Get block number
 	LD C,A	
 	PUSH HL	
 	CP $14	
@@ -1794,7 +1798,7 @@ LB5E0	RES 1,(IX+$0D)
 	SET 1,(IX+$0D)	
 LB5EE	RES 0,(IX+$0D)	
 	LD HL,(L5B0B)	; get screen position on 256x256 map
-	LD A,(IX+$00)	
+	LD A,(IX+$00)	; get column 0..255
 	SUB L	
 	LD C,A	
 	CP $18		; < 24 ?
@@ -1806,7 +1810,7 @@ LB5EE	RES 0,(IX+$0D)
 	SET 0,(IX+$0D)	
 LB60A	LD (IY+$02),A	
 	LD (IY+$00),A	
-	LD A,(IX+$01)	
+	LD A,(IX+$01)	; get row 0..255
 	SUB H	
 	CP $18		; < 24 ?
 	LD C,A	
@@ -1869,10 +1873,10 @@ LB686	BIT 5,(IX+$0D)
 	LD C,A	
 	BIT 7,(IX+$11)	
 	JR NZ,LB6A6	
-	INC (IX+$00)	
+	INC (IX+$00)	; one column right
 	INC (IY+$00)	
 	JR LB6B1	
-LB6A6	DEC (IX+$00)	
+LB6A6	DEC (IX+$00)	; one column left
 	DEC (IY+$00)	
 	LD A,L	
 	ADD A,(IY+$06)	; add DX ??
@@ -2098,7 +2102,7 @@ LB87B	CALL LB70F	; Screen attribute change for horizontally oriented object
 LB885	BIT 0,(IX+$10)	; check "moving" bit
 	JP NZ,LB941	
 	BIT 7,(IX+$11)	
-	LD A,(IX+$00)	
+	LD A,(IX+$00)	; get column 0..255
 	JR NZ,LB89C	
 	INC A	
 	INC A	
@@ -2108,32 +2112,32 @@ LB89C	DEC A
 	DEC A	
 	DEC A	
 LB89F	LD L,A	
-	LD H,(IX+$01)	
-	CALL LA129	
-	OR A	
+	LD H,(IX+$01)	; get row 0..255
+	CALL LA129	; Calculate address in relief block and Get tile nummber
+	OR A		; empty tile?
 	JR NZ,LB903	
-	INC H	
-	CALL LA129	
-	OR A	
+	INC H		; down one row
+	CALL LA129	; Calculate address in relief block and Get tile nummber
+	OR A		; empty tile?
 	JR NZ,LB903	
 	BIT 0,(IX+$0D)	
 	JR Z,LB8D7	
 	BIT 7,(IX+$0D)	
 	JR NZ,LB8D7	
 	LD DE,(L5B0B)	; get screen position on 256x256 map
-	LD A,H	
-	SUB D	
-	CP $18	
+	LD A,H		; get screen row
+	SUB D		; now A = [row 0..255] - [screen row]
+	CP $18		; result within 0..23 ?
 	JR NC,LB8D7	
-	LD D,A	
-	LD A,L	
-	SUB E	
-	CP $18	
+	LD D,A		; now D = row 0..23
+	LD A,L		; get screen column
+	SUB E		; now A = [column 0..255] - [screen column]
+	CP $18		; result within 0..23 ?
 	JR NC,LB8D7	
 	LD L,A	
-	LD H,D	
+	LD H,D		; now HL = row/column on the screen
 	CALL LA14C	; Get screen attribute address
-	LD A,(HL)	
+	LD A,(HL)	; get attribute value
 	CP $06	
 	JR NZ,LB903	
 LB8D7	LD A,R	
@@ -2198,7 +2202,7 @@ LB95D	LD (IX+$09),L	; set sprite address
 LB972	BIT 0,(IX+$10)	; check "moving" bit
 	JP NZ,LBA33	
 	BIT 7,(IX+$12)	
-	LD A,(IX+$01)	
+	LD A,(IX+$01)	; get row 0..255
 	JR NZ,LB988	
 	ADD A,(IY+$09)	
 	INC A	
@@ -2206,15 +2210,15 @@ LB972	BIT 0,(IX+$10)	; check "moving" bit
 LB988	DEC A	
 	DEC A	
 LB98A	LD H,A	
-	LD L,(IX+$00)	
-	CALL LA129	
-	OR A	
+	LD L,(IX+$00)	; get column 0..255
+	CALL LA129	; Calculate address in relief block and Get tile nummber
+	OR A		; empty tile?
 	JR NZ,LB9F9	
 	LD A,L	
 	ADD A,(IY+$06)	
 	LD L,A	
-	CALL LA129	
-	OR A	
+	CALL LA129	; Calculate address in relief block and Get tile nummber
+	OR A		; empty tile?
 	JR NZ,LB9F9	
 	BIT 0,(IX+$0D)	
 	JR Z,LB9C7	
@@ -2234,7 +2238,7 @@ LB98A	LD H,A
 	LD L,A	
 	LD H,D	
 	CALL LA14C	; Get screen attribute address
-	LD A,(HL)	
+	LD A,(HL)	; get attribute value
 	CP $06	
 	JR NZ,LB9F9	
 LB9C7	LD A,R	
@@ -2252,14 +2256,14 @@ LB9D4	BIT 2,A
 	SUB $02	
 	LD L,A	
 LB9E3	INC L	
-	CALL LA129	
-	OR A	
+	CALL LA129	; Calculate address in relief block and Get tile nummber
+	OR A		; empty tile?
 	JR NZ,LB9CF	
 	LD A,H	
 	ADD A,(IY+$08)	
 	LD H,A	
-	CALL LA129	
-	OR A	
+	CALL LA129	; Calculate address in relief block and Get tile nummber
+	OR A		; empty tile?
 	JR NZ,LB9CF	
 	LD (IX+$11),C	
 	RET	
@@ -2319,16 +2323,16 @@ LBA64	BIT 0,(IX+$10)	; check "moving" bit
 	LD E,(IY+$14)	
 	JR LBA96	
 LBA8F	DEC L	
-	LD D,(IY+$17)	; Get screen attribute address
+	LD D,(IY+$17)	; Get ??
 	LD E,(IY+$16)	
-LBA96	CALL LA129	
-	OR A	
+LBA96	CALL LA129	; Calculate address in relief block and Get tile nummber
+	OR A		; empty tile?
 	JR NZ,LBADE	
 	LD A,H	
 	ADD A,(IY+$08)	
 	LD H,A	
-	CALL LA129	
-	OR A	
+	CALL LA129	; Calculate address in relief block and Get tile nummber
+	OR A		; empty tile?
 	JR NZ,LBADE	
 	LD A,R	
 	JR Z,LBADE	
@@ -2336,9 +2340,9 @@ LBA96	CALL LA129
 	JR NZ,LBAB4	
 LBAAF	LD (IX+$12),$00	
 	RET	
-LBAB4	LD H,(IX+$01)	
-	LD L,(IX+$00)	
-	DEC H	
+LBAB4	LD H,(IX+$01)	; get row 0..255
+	LD L,(IX+$00)	; get column 0..255
+	DEC H		; one row up
 	LD C,$FF	
 	BIT 2,A	
 	JR Z,LBAC9	
@@ -2346,15 +2350,15 @@ LBAB4	LD H,(IX+$01)
 	LD A,H	
 	ADD A,(IY+$09)	
 	LD H,A	
-	INC H	
-LBAC9	CALL LA129	
-	OR A	
+	INC H		; one row down
+LBAC9	CALL LA129	; Calculate address in relief block and Get tile nummber
+	OR A		; empty tile?
 	JR NZ,LBAAF	
 	LD A,L	
 	ADD A,(IY+$06)	
 	LD L,A	
-	CALL LA129	
-	OR A	
+	CALL LA129	; Calculate address in relief block and Get tile nummber
+	OR A		; empty tile?
 	JR NZ,LBAAF	
 	LD (IX+$12),C	
 	RET	
@@ -2363,8 +2367,8 @@ LBADE	LD (IX+$0B),E
 	SET 0,(IX+$10)	; set "moving" bit
 	RES 7,(IX+$10)	
 	SLA (IX+$0E)	
-	LD L,(IX+$00)	
-	LD H,(IX+$01)	
+	LD L,(IX+$00)	; get column 0..255
+	LD H,(IX+$01)	; get row 0..255
 	BIT 7,(IX+$11)	
 	JR NZ,LBB04	
 	LD A,L	
@@ -2379,15 +2383,15 @@ LBB04	LD A,R
 	ADD A,(IY+$08)	
 	SUB (IY+$07)	
 	LD H,A	
-	CALL LA129	
-	OR A	
+	CALL LA129	; Calculate address in relief block and Get tile nummber
+	OR A		; empty tile?
 	JR NZ,LBB32	
 	LD A,L	
 	LD C,L	
 	ADD A,(IY+$08)	
 	LD L,A	
-	CALL LA129	
-	OR A	
+	CALL LA129	; Calculate address in relief block and Get tile nummber
+	OR A		; empty tile?
 	LD L,C	
 	JR NZ,LBB32	
 	SET 6,(IX+$10)	
@@ -2397,25 +2401,25 @@ LBB04	LD A,R
 	JR LBB5E	
 LBB32	LD A,R	
 	JR Z,LBB75	
-	LD A,(IX+$01)	
+	LD A,(IX+$01)	; get row 0..255
 	CP $FA	
 	JR NC,LBB75	
 	ADD A,(IY+$07)	
 	LD H,A	
-	CALL LA129	
-	OR A	
+	CALL LA129	; Calculate address in relief block and Get tile nummber
+	OR A		; empty tile?
 	JR NZ,LBB75	
 	LD C,L	
 	LD A,L	
 	ADD A,(IY+$08)	
 	LD L,A	
-	CALL LA129	
-	OR A	
+	CALL LA129	; Calculate address in relief block and Get tile nummber
+	OR A		; empty tile?
 	LD L,C	
 	JR NZ,LBB75	
 	SET 6,(IX+$10)	
 	LD A,(IX+$17)	
-	LD H,(IX+$01)	
+	LD H,(IX+$01)	; get row 0..255
 LBB5E	LD (IX+$18),A	
 	XOR A	
 	LD (IX+$12),A	
@@ -2427,8 +2431,8 @@ LBB5E	LD (IX+$18),A
 	RET	
 LBB75	RES 6,(IX+$10)	
 	RES 5,(IX+$10)	
-	LD H,(IX+$01)	
-	LD L,(IX+$00)	
+	LD H,(IX+$01)	; get row 0..255
+	LD L,(IX+$00)	; get column 0..255
 	BIT 7,(IX+$11)	
 	JR NZ,LBB8F	
 	XOR A	
@@ -2444,17 +2448,17 @@ LBB94	BIT 7,(IX+$12)
 	LD D,(IY+$17)	
 	LD E,(IY+$16)	
 	JR LBBAE	
-LBBA7	DEC H	
+LBBA7	DEC H		; one row up
 	LD D,(IY+$15)	
 	LD E,(IY+$14)	
-LBBAE	CALL LA129	
-	OR A	
+LBBAE	CALL LA129	; Calculate address in relief block and Get tile nummber
+	OR A		; empty tile?
 	JR NZ,LBBF6	
 	LD A,L	
 	ADD A,(IY+$06)	
 	LD L,A	
-	CALL LA129	
-	OR A	
+	CALL LA129	; Calculate address in relief block and Get tile nummber
+	OR A		; empty tile?
 	JR NZ,LBBF6	
 	LD A,R	
 	JR Z,LBBF6	
@@ -2462,9 +2466,9 @@ LBBAE	CALL LA129
 	JR NZ,LBBCC	
 LBBC7	LD (IX+$11),$00	
 	RET	
-LBBCC	LD H,(IX+$01)	
-	LD L,(IX+$00)	
-	DEC L	
+LBBCC	LD H,(IX+$01)	; get row 0..255
+	LD L,(IX+$00)	; get column 0..255
+	DEC L		; one column left
 	LD C,$FF	
 	BIT 2,A	
 	JR Z,LBBE1	
@@ -2473,14 +2477,14 @@ LBBCC	LD H,(IX+$01)
 	ADD A,(IY+$07)	
 	INC A	
 	LD L,A	
-LBBE1	CALL LA129	
-	OR A	
+LBBE1	CALL LA129	; Calculate address in relief block and Get tile nummber
+	OR A		; empty tile?
 	JR NZ,LBBC7	
 	LD A,H	
 	ADD A,(IY+$08)	
 	LD H,A	
-	CALL LA129	
-	OR A	
+	CALL LA129	; Calculate address in relief block and Get tile nummber
+	OR A		; empty tile?
 	JR NZ,LBBC7	
 	LD (IX+$11),C	
 	RET	
@@ -2489,8 +2493,8 @@ LBBF6	LD (IX+$0B),E
 	SET 0,(IX+$10)	; set "moving" bit
 	SET 7,(IX+$10)	
 	SLA (IX+$0E)	
-	LD L,(IX+$00)	
-	LD H,(IX+$01)	
+	LD L,(IX+$00)	; get row 0..255
+	LD H,(IX+$01)	; get column 0..255
 	BIT 7,(IX+$12)	
 	JR NZ,$BC1C	
 	LD A,H	
@@ -2503,15 +2507,15 @@ LBC1C	LD A,R
 	ADD A,(IY+$06)	
 	SUB (IY+$09)	
 	LD L,A	
-	CALL LA129	
-	OR A	
+	CALL LA129	; Calculate address in relief block and Get tile nummber
+	OR A		; empty tile?
 	JR NZ,LBC47	
 	LD A,H	
 	LD C,H	
 	ADD A,(IY+$06)	
 	LD H,A	
-	CALL LA129	
-	OR A	
+	CALL LA129	; Calculate address in relief block and Get tile nummber
+	OR A		; empty tile?
 	LD H,C	
 	JR NZ,LBC47	
 	RES 6,(IX+$10)	
@@ -2522,15 +2526,15 @@ LBC1C	LD A,R
 LBC47	LD A,(IX+$00)	
 	ADD A,(IY+$09)	
 	LD L,A	
-	CALL LA129	
-	OR A	
+	CALL LA129	; Calculate address in relief block and Get tile nummber
+	OR A		; empty tile?
 	JR NZ,LBC6E	
 	LD C,H	
 	LD A,H	
 	ADD A,(IY+$06)	
 	LD H,A	
-	CALL LA129	
-	OR A	
+	CALL LA129	; Calculate address in relief block and Get tile nummber
+	OR A		; empty tile?
 	LD H,C	
 	JR NZ,LBC6E	
 	RES 6,(IX+$10)	
@@ -2539,8 +2543,8 @@ LBC47	LD A,(IX+$00)
 	JP LBB5E	
 LBC6E	SET 6,(IX+$10)	
 	RES 5,(IX+$10)	
-	LD H,(IX+$01)	
-	LD L,(IX+$00)	
+	LD H,(IX+$01)	; get row 0..255
+	LD L,(IX+$00)	; get column 0..255
 	BIT 7,(IX+$12)	
 	JR NZ,LBC89	
 	XOR A	
@@ -2583,9 +2587,9 @@ LBCC1	BIT 5,(IX+$10)
 	LD (IX+$13),L	; set X value
 	LD (IX+$14),H	; set Y value
 LBCEA	LD A,(IX+$1A)	
-	LD (IX+$00),A	
+	LD (IX+$00),A	; set column
 	LD A,(IX+$1B)	
-	LD (IX+$01),A	
+	LD (IX+$01),A	; set row
 	BIT 6,(IX+$10)	
 	JR Z,LBD04	
 	BIT 7,(IX+$18)	
