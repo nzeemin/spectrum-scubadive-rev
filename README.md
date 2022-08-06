@@ -18,6 +18,38 @@ The original binary used for the disasm is .TAP file from [World of Spectrum](ht
   "D         "  CODE   55552,  6144   $1800   $D900-$F0FF
 ```
 
+## Spectrum 48K ROM usage
+
+The BASIC loader code is the following:
+```
+1 CLEAR 24575: INK 0: PAPER 0: BORDER 1: CLS : LOAD ""CODE: PRINT AT 2,0;: LOAD ""CODE: PRINT AT 2,0;: LOAD ""CODE
+2 IF USR 60895THEN SAVE "S/D SCORE"CODE 59866,160: GO TO 2
+3 LOAD "S/D SCORE"CODE : GO TO 2
+```
+Line 1 loads the game binaries.
+Line 2 starts the assemmbly code at 60895 ($EDDF); in the game menu user could press <KBD>S</KBD> to save score table, in this case we're returning from the assembly code and going to <code>THEN</code> on line 2.
+Or, user could press <KBD>L</KBD> on the menu, and in this case we're going to line 3, loading the score table.
+Anyway, after load or save we're returning to line 2 and re-entering the same starting point again.
+
+The game code uses some ROM subroutines: to clear screen, print text on the screen, set border color, keyboard scan and sound generation. Also the code uses some system variables like <code>LAST-K</code> and <code>ATTR-P</code>. ROM font used in text output subroutines.
+
+
+## The reversed code
+
+The reversed code structure:
+ - <code>basloader.bas</code> - text representation for the BASIC code used for game loading, and also for score table saving and loading
+ - <code>scubacoda.asm</code> - block $4000-$5BED
+   - <code>scubascrn.dat</code> - loading screen in raw binary format
+ - <code>scubacodb.asm</code> - block $6000-$C4FF
+   - <code>scubasprt.dat</code> - sprites $6000-$9C4F
+   - <code>scubarelf.dat</code> - relief tiles and world mini-map
+ - <code>scubacodc.asm</code> - block $D900-$F0FF
+
+All three code .asm code files are compiled with pasmo cross-assembler, and compared to original binary blocks byte-to-byte, no differences.
+
+
+## The game map
+
 The game labyrinth "warped up":
 first, the AC5D table (the "mini-map") contains 32x32 = 256 block indices;
 second, blocks at A4DD contains 8x8 tiles each;
@@ -25,7 +57,7 @@ and finally, tiles at 9134 are 8x8 pixels each.
 So the whole world is 256x256 tiles = 2048x2048 pixels.
 We always see only 24x24 tiles on the screen.
 
-Looks like the map created in a procedural way, changing block numbers in the AC5D table.
+The game map created in a procedural way, changing block numbers in the AC5D table.
 The map depth depends on the game level 1..4.
 
 There's an interesting way to put a big Octopus on the map.

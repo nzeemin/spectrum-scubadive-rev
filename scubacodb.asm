@@ -358,7 +358,7 @@ L9E38	LD A,$02	; initial trunk width
 	DEC L		; previous column
 	CALL L9D79	; Calc address in MiniMap and Set block number = $1C - Octopus place
 	DEC L		; previous column
-; Building the labirynth down from the hole with Octopus
+; Building the labyrinth down from the hole with Octopus
 	LD (L5B07),HL	; store the octopus place as the current trunk position
 L9E5F	LD HL,(L5B07)	; get current trunk position
 	INC H		; next row
@@ -373,7 +373,7 @@ L9E5F	LD HL,(L5B07)	; get current trunk position
 	DEC C		; now C = 19 / 23 / 27 / 31 - row where the labirinth ends
 	CP H		; row = A ?
 	JR NZ,L9E99	; no => jump
-; The labirynth ends on this depth	
+; The labyrinth ends on this depth	
 	DEC H		; previous row
 	LD A,(L5B09)	; get trunk width
 	LD B,A		; B = loop counter
@@ -393,7 +393,7 @@ L9E8D	CALL L9D79	; Calc address in MiniMap and Set block number
 	CALL LA193	
 	CALL LB1D4	
 	RET	
-; Fill the labirynth on this row level
+; Fill the labyrinth on this row level
 L9E99	PUSH HL	
 	PUSH BC	
 	CALL NextRandom	; Random
