@@ -3,49 +3,71 @@
 	INCLUDE "scubacodb.txt"
 
 ;----------------------------------------------------------------------------
+; ZX Spectrum 48K ROM calls used by the game code
+
+ROM_KEYBOARD	EQU $02BF	; Scan the keyboard and decode the key value into LAST-K variable
+ROM_BEEPER	EQU $03B5
+ROM_CLS		EQU $0D6B	; Clear screen; attributes are filled with ATTR_P
+ROM_CHANOPEN	EQU $1601	; CHAN-OPEN subroutine
+ROM_OUTNUM1	EQU $1A1B	; OUT-NUM-1 subroutine
+ROM_PRSTRING	EQU $203C	; PR-STRING subroutine
+ROM_BORDER1	EQU $229B	; inside BORDER subroutine
+ROM_CHARSET	EQU $3D00
+
+;----------------------------------------------------------------------------
+; ZX Spectrum variables used by the game code
+
+KSTATE5	EQU $5C05	; KSTATE5
+LAST_K	EQU $5C08	; LAST-K - Last key pressed
+FLAGS2	EQU $5C6A	; FLAGS2 - More flags
+FRAMES	EQU $5C78	; FRAMES - Frame counter
+UDG	EQU $5C7B	; UDG - Address of first user defined graphic
+ATTR_P	EQU $5C8D	; ATTR-P - Permanent current colours
+
+;----------------------------------------------------------------------------
 
 	ORG $D900
 
 	DEFS $90	
 
 ; Game
-LD990	DI	
+Game	DI	
 	PUSH IX	
 	PUSH IY	
 	LD HL,$0000	
-	LD (L5B44),HL	; reset Score value
-	LD (LDEFF),HL	; reset HELD value
+	LD (SCORE),HL	; reset Score value
+	LD (HELD),HL	; reset HELD value
 	LD A,$03	; Number of lives
-	LD (L5B37),A	; set the initial value
-LD9A3	CALL L9DAA	; Prepare the world mini-map (LAC5D table)
-	CALL LDBC2	; Initialize variables depending of Game level
+	LD (LIVES),A	; set the initial value
+LD9A3	CALL PrepareMiniMap	; Prepare the world MiniMap table
+	CALL InitLevelVars	; Initialize variables depending of Game level
 	CALL LBEDB	
 	LD HL,LE361	
 	LD (HL),$00	
 LD9B1	CALL LDAAD	; Prepare game screen and some variables
 	CALL LE6AB	
 	LD HL,(L5B03)	; get Screen position on mini-map
-	CALL L9C56	; Draw game screen
+	CALL DrawGameScr	; Draw game screen
 	CALL LBDBA	
 LD9C0	CALL LB213	
 	CALL LBDEA	
 	CALL LE2A8	
-	LD IX,LE33B	; Diver object address
+	LD IX,DiverObj	; Diver object address
 	BIT 4,(IX+$26)	
 	JR NZ,LD9DB	
 	BIT 5,(IX+$10)	
 	JR NZ,LD9F4	
 	JR LD9C0	
-LD9DB	LD A,(L5B37)	; get Number of lives
+LD9DB	LD A,(LIVES)	; get Number of lives
 	CP $04	
 	JR NZ,LD9E7	
 	LD A,$03	
-	LD (L5B37),A	; set Number of lives
-LD9E7	LD A,(L5B10)	; Game level 1..4
+	LD (LIVES),A	; set Number of lives
+LD9E7	LD A,(LEVEL)	; Game level 1..4
 	CP $04	
 	JR Z,LD9EF	
 	INC A		; increase Game level
-LD9EF	LD (L5B10),A	; Save game level 1..4
+LD9EF	LD (LEVEL),A	; Save game level 1..4
 	JR LD9A3	
 LD9F4	LD B,$00	; repeat 256 times
 LD9F6	PUSH BC	
@@ -60,17 +82,17 @@ LD9F6	PUSH BC
 	LD A,(L5B0F)	
 	CP $03	
 	JR NZ,LDA1E	
-	LD A,(L5B37)	; get Number of lives
+	LD A,(LIVES)	; get Number of lives
 	CP $01	
 	JR Z,LDA1E	; No more lives? => no lives, jump
 	DEC A	
-	LD (L5B37),A	; set Number of lives
+	LD (LIVES),A	; set Number of lives
 	JR LD9DB	
-LDA1E	LD A,(L5B37)	; get Number of lives
+LDA1E	LD A,(LIVES)	; get Number of lives
 	CP $01		; last live?
 	JR Z,LDA33	; yes => game over
 	DEC A		; One live less
-	LD (L5B37),A	; set Number of lives
+	LD (LIVES),A	; set Number of lives
 	LD HL,LE361	
 	LD A,(HL)	
 	AND $20	
@@ -130,7 +152,7 @@ LDA6B	PUSH HL
 	ADD HL,HL	; *8
 	BIT 7,A	
 	JR NZ,LDA83	
-	LD BC,$3D00	; ROM font address, for chars $20..$7F
+	LD BC,ROM_CHARSET	; ROM font address, for chars $20..$7F
 	JR $DA86	
 LDA83	LD BC,LDC80	; Tiles 8x8 address, for chars $80..$AE
 LDA86	ADD HL,BC	
@@ -223,7 +245,7 @@ LDAAD	LD A,$30
 	DEC HL	
 	LD (LDE57),HL	; set Oxygen initial level
 	LD (HL),$20	; indicate initial Oxygen level
-	LD A,(L5B10)	; Game level 1..4
+	LD A,(LEVEL)	; Game level 1..4
 	DEC A	
 	RRCA	
 	RRCA	
@@ -232,7 +254,7 @@ LDAAD	LD A,$30
 	LD HL,$58FD	; base address in attributes area
 	ADD HL,DE	
 	LD (HL),$4F	; indicate Game level
-	LD A,(L5B37)	; get Number of lives
+	LD A,(LIVES)	; get Number of lives
 	DEC A	
 	RRCA	
 	RRCA	
@@ -242,27 +264,27 @@ LDAAD	LD A,$30
 	ADD HL,DE	
 	LD (LDE59),HL	
 	LD (HL),$4F	; indicate nummber of lives
-	LD IX,LE33B	; Diver object address
-	CALL LDED9	; Print high score number
-	CALL LDEE5	; Print score number
-	CALL LDEF1	; Print HELD number
-	LD A,(L5B10)	; Game level 1..4
+	LD IX,DiverObj	; Diver object address
+	CALL PrintHighScore	; Print high score number
+	CALL PrintScore	; Print score number
+	CALL PrintHeld	; Print HELD number
+	LD A,(LEVEL)	; Game level 1..4
 	DEC A	
 	ADD A,A	
 	ADD A,A	
 	ADD A,A	
-	ADD A,A		; A = ([Game level] - 1) * 16 => 0 / 16 / 32 / 48
+	ADD A,A		; A = (LEVEL - 1) * 16 => 0 / 16 / 32 / 48
 	LD E,A	
 	LD D,$00	
 	LD HL,LDDF0	
-	ADD HL,DE	; HL = $DDF0 + ([Game level] - 1) * 16
+	ADD HL,DE	; HL = $DDF0 + (LEVEL - 1) * 16
 	LD DE,L5B27	
 	LD BC,$000E	
 	LDIR		; copy 14 bytes = 7 words
-	LD A,(L5B10)	; Game level 1..4
+	LD A,(LEVEL)	; Game level 1..4
 	LD C,A	
 	LD A,$05	
-	SUB C		; A = 5 - [Game level] => 4 / 3 / 2 / 1
+	SUB C		; A = 5 - LEVEL => 4 / 3 / 2 / 1
 	LD (IX+$1C),A	
 	LD (IX+$1E),A	
 	LD C,A	
@@ -270,46 +292,47 @@ LDAAD	LD A,$30
 	SUB C		; A => 12 / 13 / 14 / 15
 	LD (IX+$1D),A	
 	LD (IX+$1B),A	
-	LD A,(L5B10)	; Game level 1..4
+	LD A,(LEVEL)	; Game level 1..4
 	ADD A,A	
 	LD C,A	
 	LD A,$0A	
-	SUB C		; A = 10 - [Game level] * 2
+	SUB C		; A = 10 - LEVEL * 2
 	ADD A,$02	
-	LD (L5B0E),A	; = 10 - [Game level] * 2 + 2 => 10 / 8 / 6 / 4
+	LD (L5B0E),A	; = 10 - LEVEL * 2 + 2 => 10 / 8 / 6 / 4
 	SUB $03	
-	LD (L5B0D),A	; = 10 - [Game level] * 2 + 2 - 3 => 7 / 5 / 3 / 1
+	LD (L5B0D),A	; = 10 - LEVEL * 2 + 2 - 3 => 7 / 5 / 3 / 1
 	RET
 
 ; Initialize variables depending of Game level
-LDBC2	LD A,(L5B10)	; Game level 1..4
+InitLevelVars
+	LD A,(LEVEL)	; Game level 1..4
 	ADD A,A	
 	ADD A,A		; *4
-	ADD A,$09	; A = [Game level] * 4 + 9 => 13 / 17 / 21 / 25
+	ADD A,$09	; A = LEVEL * 4 + 9 => 13 / 17 / 21 / 25
 	LD (L5B13),A	
 	LD (L5B14),A	
-	ADD A,$05	; A = [Game level] * 4 + 9 + 5 => 18 / 22 / 26 / 31
+	ADD A,$05	; A = LEVEL * 4 + 9 + 5 => 18 / 22 / 26 / 31
 	LD (L5B16),A	
 	SUB $05	
 	ADD A,A	
-	INC A		; A = ([Game level] * 4 + 9) * 2 + 1 => 27 / 35 / 43 / 51
+	INC A		; A = (LEVEL * 4 + 9) * 2 + 1 => 27 / 35 / 43 / 51
 	LD (L5B15),A	
-	DEC A		; A = ([Game level] * 4 + 9) * 2 => 26 / 34 / 42 / 50
+	DEC A		; A = (LEVEL * 4 + 9) * 2 => 26 / 34 / 42 / 50
 	LD (L5B17),A	
-	LD A,(L5B10)	; Game level 1..4
+	LD A,(LEVEL)	; Game level 1..4
 	LD C,A	
 	ADD A,A	
 	ADD A,A	
-	ADD A,C		; A = [Game level] * 5 => 5 / 10 / 15 / 20
+	ADD A,C		; A = LEVEL * 5 => 5 / 10 / 15 / 20
 	LD (L5B18),A	
 	LD C,A	
 	ADD A,A	
 	ADD A,C	
-	SUB $03		; A = [Game level] * 5 * 3 - 3 => 12 / 27 / 42 / 57
+	SUB $03		; A = LEVEL * 5 * 3 - 3 => 12 / 27 / 42 / 57
 	LD (L5B19),A	
 	LD HL,$0001	
 	LD (L5B25),HL	
-	LD A,(L5B10)	; Game level 1..4
+	LD A,(LEVEL)	; Game level 1..4
 	NEG	
 	ADD A,$04	; 3 / 2 / 1 / 0
 	RET Z	
@@ -400,7 +423,8 @@ LDDF0	DEFW $0002,$0005,$004B,$0019,$0032,$00FA,$0019,$0000	; Level 1
 ; I: A = value 0..15, DE = base address in screen attributes area
 ; I: HL = old address for the indicator
 ; O: HL = new address for the indicator
-LDE2E	LD (HL),$38	
+UpdateGauge
+	LD (HL),$38	
 	RRCA	
 	RRCA	
 	RRCA	
@@ -415,14 +439,15 @@ LDE2E	LD (HL),$38
 	RET	
 
 ; Update Depth indicator
-LDE3E	LD HL,(LDE55)	; get Depth indicator address
+UpdateDepth
+	LD HL,(LDE55)	; get Depth indicator address
 	LD DE,$58FB	; base address in screen attributes area
 	LD C,$28	
 	LD A,(L5B03+1)	; get screen position on mini-map, row value
 	INC A	
 	SRL A	
 	AND $0F		; 0..15
-	CALL LDE2E	; Update the gauge indicator on the screen
+	CALL UpdateGauge	; Update the gauge indicator on the screen
 	LD (LDE55),HL	; set Depth indicator address
 	RET
 
@@ -433,7 +458,8 @@ LDE5B	DEFW $FFFF	; Oxygen level
 
 ; Update Oxygen indicator
 ; I: HL = new value for Oxygen
-LDE5D	LD (LDE5B),HL	
+UpdateOxygen
+	LD (LDE5B),HL	
 	LD A,H	
 	SRL A	
 	SRL A	
@@ -449,14 +475,15 @@ LDE5D	LD (LDE5B),HL
 	JR C,LDE7E	
 	CALL LE645	; Play melody LE629
 	LD C,$10	
-LDE7E	CALL LDE2E	; Update the gauge indicator on the scree
+LDE7E	CALL UpdateGauge	; Update the gauge indicator on the scree
 	LD (LDE57),HL	; set Oxygen indicator address
 	RET	
 
 ; Print decimal number
 ; I: HL = number to print
 ; I: DE = address on the screen
-LDE85	LD (IX+$23),B	
+PrintDec
+	LD (IX+$23),B	
 	PUSH DE	
 	LD IY,LE5E0	; address for list of dividers: 10000, 1000, 100, 10, 1
 LDE8D	LD C,$FF	
@@ -504,28 +531,31 @@ LDEC7	LD A,(HL)
 	RET
 
 ; Print high score number
-LDED9	LD B,$00	
-	LD HL,(L5B4B)	
+PrintHighScore
+	LD B,$00	
+	LD HL,(HSCORE)	
 	LD DE,$4059	; screen address AT 25,2
-	CALL LDE85	; Print decimal number
+	CALL PrintDec	; Print decimal number
 	RET
 
 ; Print score number
-LDEE5	LD B,$00	
-	LD HL,(L5B44)	; get Score number
+PrintScore
+	LD B,$00	
+	LD HL,(SCORE)	; get Score number
 	LD DE,$4099	; screen address AT 25,4
-	CALL LDE85	; Print decimal number
+	CALL PrintDec	; Print decimal number
 	RET
 
 ; Print HELD number
-LDEF1	LD B,$02	
-	LD HL,(LDEFF)	; get HELD value
+PrintHeld
+	LD B,$02	
+	LD HL,(HELD)	; get HELD value
 	LD DE,$40DA	; screen address AT 26,6
-	CALL LDE85	; Print decimal number
+	CALL PrintDec	; Print decimal number
 	RET
 
 LDEFD	DEFB $00,$00	
-LDEFF	DEFW $0000	; HELD value
+HELD	DEFW $0000	; HELD value
 LDF01	DEFB $00,$00,$00,$00,$00,$00,$02,$03
 	DEFB $02,$03,$18,$10,$00,$30
 LDF0F	DEFW $0000
@@ -556,7 +586,7 @@ LDF45	DEFB $00,$00,$00,$00,$00,$00,$00,$00
 	DEFB $00,$00,$00,$00,$00,$00,$00,$00	
 	DEFB $00,$00,$00,$00,$00,$00,$00,$00	
 
-; I:IX = Diver object address = LE33B
+; I:IX = Diver object address = DiverObj
 LDFD5	LD HL,(LB7B9)	
 	LD DE,(L5B35)	
 	LD (L5B35),HL	
@@ -695,8 +725,8 @@ LE120	LD A,(IX+$0D)
 	AND $1F		; row 0..31
 	LD H,A	
 	LD (L5B03),HL	; set Screen position on mini-map
-	CALL L9C56	; Draw game screen
-	CALL LDE3E	; Update Depth indicator
+	CALL DrawGameScr	; Draw game screen
+	CALL UpdateDepth	; Update Depth indicator
 	LD HL,(LB7B9)	
 	LD DE,(L5B35)	
 	LD (LB7B9),DE	
@@ -841,7 +871,7 @@ LE26E	POP DE
 	LD (HL),$FF	
 	RET
 
-LE2A8	LD IX,LE33B	; Diver object address
+LE2A8	LD IX,DiverObj	; Diver object address
 	DEC (IX+$0F)	
 	JR NZ,LE2CC	
 	LD A,(IX+$0E)	; get speed factor
@@ -855,13 +885,14 @@ LE2C5	SET 0,(IX+$0D)
 LE2CC	DEC (IX+$20)	
 	RET NZ	
 	LD (IX+$20),$14	
-	CALL LE2DB	; Read keyboard input
+	CALL ReadKeyboard	; Read keyboard input
 	CALL LE364	
 	RET	
 
 ; Read keyboard input
-; I: IX = Diver object address = LE33B
-LE2DB	BIT 3,(IX+$10)	
+; I: IX = Diver object address = DiverObj
+ReadKeyboard
+	BIT 3,(IX+$10)	
 	RET NZ	
 	LD E,(IX+$06)	; get Angle
 	LD BC,(L5B38)	; get port for Clockwise key
@@ -911,6 +942,7 @@ LE337	INC (IX+$0E)
 	RET
 
 ; Diver object record
+DiverObj
 LE33B	DEFB $0A	; (IX+$00) Column 0..31
 LE33C	DEFB $0A	; (IX+$01) Row
 LE33D	DEFB $04	; (IX+$02) ???
@@ -948,13 +980,13 @@ LE361	DEFB $00	; (IX+$26) ??? bits 0/1/2/3/4/5/6
 LE362	DEFB $00	; (IX+$27) ???
 LE363	DEFB $00	; (IX+$28) ???
 
-; I: IX = Diver object address = LE33B
+; I: IX = Diver object address = DiverObj
 LE364	BIT 5,(IX+$10)	
 	RET NZ	
 	BIT 7,(IX+$10)	
 	JP Z,LE767	
 	LD HL,(LDE5B)	; get Oxygen level
-	LD A,(L5B10)	; Game level 1..4
+	LD A,(LEVEL)	; Game level 1..4
 	ADD A,A	
 	ADD A,A	
 	ADD A,A		; *8
@@ -962,14 +994,14 @@ LE364	BIT 5,(IX+$10)
 	LD E,A	
 	LD D,$00	
 	LD A,H	
-	SBC HL,DE	; HL = [Oxygen] - [Game level] * 8 - 10
+	SBC HL,DE	; HL = [Oxygen] - LEVEL * 8 - 10
 	LD (LDE5B),HL	; set Oxygen level
 	CP H	
-	CALL NZ,LDE5D	; => Update Oxygen indicator
+	CALL NZ,UpdateOxygen	; => Update Oxygen indicator
 	LD A,(LDE5B+1)	; get Oxygen high byte
 	AND $F0	
 	JR NZ,LE393	
-	CALL LE43A	; Explosion
+	CALL LE43A	; Diver explosion
 	RET	
 LE393	LD A,(IX+$22)	
 	OR A	
@@ -993,8 +1025,8 @@ LE3A6	LD A,(HL)
 	CALL LA14C	; Get screen attribute address
 	LD A,(HL)	; get attribute
 	POP HL	
-	CP $02	
-	JP NZ,LE476	; => Interact with object - like take Oxygen of get pick up pearls from shells
+	CP $02		; red on black? (color for relief)
+	JP NZ,LE476	; no => Interact with object - like take Oxygen or pick up pearls
 ;
 LE3C0	BIT 4,(IX+$10)	
 	JR NZ,LE418	
@@ -1002,7 +1034,7 @@ LE3C0	BIT 4,(IX+$10)
 	CP $FF	
 	JR NZ,LE3D2
 ;
-LE3CD	CALL LE43A	; Explosion
+LE3CD	CALL LE43A	; Diver explosion
 	JR LE418	
 LE3D2	OR A	
 	JR NZ,LE418	
@@ -1026,11 +1058,11 @@ LE3D2	OR A
 	LD (IX+$0C),H	
 	LD (IX+$21),$E6	
 	LD HL,$0000	
-	LD (LDEFF),HL	; reset HELD value
-	CALL LDEF1	; Print HELD number
+	LD (HELD),HL	; reset HELD value
+	CALL PrintHeld	; Print HELD number
 	RES 6,(IX+$10)	
 	LD HL,LE604	; Melody address
-	CALL LE5EC	; Play melody
+	CALL PlayMelody	; Play melody
 ;
 LE418	POP HL	
 	JR LE3A6
@@ -1048,8 +1080,8 @@ LE41B	INC (IX+$21)
 	LD (IX+$0E),$14	
 	RET
 
-; Diver explosion ??
-; I: IX = Diver object address = LE33B
+; Diver explosion
+; I: IX = Diver object address = DiverObj
 LE43A	BIT 3,(IX+$26)	
 	RET NZ	
 	SET 5,(IX+$10)	
@@ -1058,23 +1090,23 @@ LE43A	BIT 3,(IX+$26)
 	LD A,(IX+$06)	; get Angle 0..15
 	INC A	
 	LD HL,L9B4C	; Explosion sprite address
-	LD BC,$0020	
+	LD BC,$0020	; 32
 	BIT 2,A	
 	JR Z,LE45A	
-	ADD HL,BC	
+	ADD HL,BC	; use the other explosion sprite
 LE45A	LD (IX+$09),L	
 	LD (IX+$0B),L	
 	LD (IX+$0A),H	
-	LD (IX+$0C),H	
+	LD (IX+$0C),H	; set sprite address
 	LD HL,LE61C	
-	CALL LE5EC	; Play melody
+	CALL PlayMelody	; Play melody
 	LD HL,$0000	
-	LD (LDEFF),HL	; reset HELD value
-	CALL LDEF1	; Print HELD number
+	LD (HELD),HL	; reset HELD value
+	CALL PrintHeld	; Print HELD number
 	RET	
 
-; Interact with object - like take Oxygen of get pick up pearls from shells
-; I: IX = Diver object address = LE33B
+; Interact with object - like take Oxygen or pick up pearls
+; I: IX = Diver object address = DiverObj
 ; I: HL = column and row
 LE476	LD IY,LB07D	; Table of objects on the screen
 LE47A	LD A,(IY+$01)	; get address hi
@@ -1099,7 +1131,7 @@ LE47A	LD A,(IY+$01)	; get address hi
 	ADD HL,BC	
 	JR NC,LE4A5	
 	LD HL,$FFFF	; maximum Oxygen
-LE4A5	CALL LDE5D	; Update Oxygen indicator
+LE4A5	CALL UpdateOxygen	; Update Oxygen indicator
 	JP LE418	
 LE4AB	LD BC,$0004	
 	ADD IY,BC	; next record in LB07D table
@@ -1151,12 +1183,12 @@ LE4C3	BIT 6,(IX+$10)
 	JR C,LE533	
 	JR LE509	
 LE4FB	LD BC,(L5B33)	; get value 25 / 50 / 75 / 100 depending of game level
-	LD (LDEFF),BC	; set HELD value
+	LD (HELD),BC	; set HELD value
 	SET 6,(IX+$10)	
 	JR LE510	
-LE509	LD HL,(LDEFF)	; get HELD value
+LE509	LD HL,(HELD)	; get HELD value
 	ADD HL,BC	
-	LD (LDEFF),HL	; set HELD value
+	LD (HELD),HL	; set HELD value
 LE510	POP DE	
 	EX DE,HL	
 	CALL LA14C	; Get screen attribute address
@@ -1167,8 +1199,8 @@ LE510	POP DE
 	LD A,(BC)	
 	SET 3,A	
 	LD (BC),A	
-	CALL LDEF1	; Print HELD number
-	CALL LE615	; Make sound
+	CALL PrintHeld	; Print HELD number
+	CALL LE615	; Play melody LE60B
 	LD HL,L5B0F	
 	INC (HL)	
 	LD HL,(L5B48)	
@@ -1186,12 +1218,12 @@ LE533	PUSH BC
 	LD A,H	
 	LD (DE),A	
 	LD HL,(L5B33)	; get value 25 / 50 / 75 / 100 depending of game level
-	LD (LDEFF),HL	; set HELD value
+	LD (HELD),HL	; set HELD value
 	SET 6,(IX+$10)	
 	POP DE	
 	POP BC	
-	CALL LDEF1	; Print HELD number
-	CALL LE615	; Make sound
+	CALL PrintHeld	; Print HELD number
+	CALL LE615	; Play melody LE60B
 	JP LE418	
 ; We've got a shell, big or small
 LE553	BIT 1,A		; check "big/small" bit
@@ -1222,14 +1254,14 @@ LE578	LD A,(BC)
 	OR A	
 	SBC HL,DE	
 	JP C,LE418	
-	LD HL,(LDEFF)	; get HELD value
+	LD HL,(HELD)	; get HELD value
 	ADD HL,DE	
-	LD (LDEFF),HL	; set HELD value
+	LD (HELD),HL	; set HELD value
 	LD A,(BC)	
 	SET 4,A	
 	LD (BC),A	
-	CALL LDEF1	; Print HELD number
-	CALL LE615	; Make sound
+	CALL PrintHeld	; Print HELD number
+	CALL LE615	; Play melody LE60B
 	LD HL,L5B00	
 	DEC (HL)	
 	LD HL,(L5B46)	
@@ -1261,7 +1293,7 @@ LE5BB	LD A,(BC)
 	JR LE578	; jump to update HELD value
 
 ; DE = (L5B33) - HELD
-LE5D2	LD BC,(LDEFF)	; get HELD value
+LE5D2	LD BC,(HELD)	; get HELD value
 	LD DE,(L5B33)	; get value 25 / 50 / 75 / 100 depending of game level
 	EX DE,HL	
 	OR A	
@@ -1275,7 +1307,8 @@ LE5E0	DEFW $2710,$03E8,$0064,$000A,$0001	; 10000, 1000, 100, 10, 1
 
 ; Play melody
 ; I: HL = Melody address
-LE5EC	LD E,(HL)	
+PlayMelody
+	LD E,(HL)	
 	LD A,E	
 	INC A	
 	RET Z	
@@ -1288,11 +1321,11 @@ LE5EC	LD E,(HL)
 	PUSH BC	
 	EX (SP),HL	
 	PUSH IX	
-	CALL $03B5	; ROM Beeper subroutine
+	CALL ROM_BEEPER	; ROM Beeper subroutine
 	DI	
 	POP IX	
 	POP HL	
-	JR LE5EC	; continue
+	JR PlayMelody	; continue
 
 ; Melodies
 LE604	DEFB $02,$00,$20,$03,$00,$30,$FF	
@@ -1301,7 +1334,7 @@ LE60B	DEFB $06,$00,$01,$06,$00,$03,$06,$80
 
 ; Play melody LE60B
 LE615	LD HL,LE60B	
-	CALL LE5EC	; Play melody
+	CALL PlayMelody	; Play melody
 	RET
 
 ; Melodies
@@ -1319,7 +1352,7 @@ LE645	PUSH HL
 	PUSH DE	
 	PUSH AF	
 	LD HL,LE629	
-	CALL LE5EC	; Play melody
+	CALL PlayMelody	; Play melody
 	POP AF	
 	POP DE	
 	POP HL	
@@ -1356,10 +1389,10 @@ LE69C	PUSH BC
 	DJNZ LE69C	
 	RET	
 
-LE6AB	LD IX,LE33B	; Diver object address
+LE6AB	LD IX,DiverObj	; Diver object address
 	LD HL,$FFFF	
 	LD (LDE5B),HL	; reset Oxygen level
-	LD A,(L5B37)	; get Number of lives
+	LD A,(LIVES)	; get Number of lives
 	DEC A	
 	CALL LE682	
 	LD A,(LC4F0)	
@@ -1407,7 +1440,7 @@ LE6AB	LD IX,LE33B	; Diver object address
 	AND $07		; 0..7
 LE72C	ADD A,A	
 	LD (IX+$13),A	; set X value
-	LD A,(L5B37)	; get Number of lives
+	LD A,(LIVES)	; get Number of lives
 	CP $03	
 	JR Z,LE759	
 	LD B,$0A	
@@ -1448,7 +1481,7 @@ LE78C	LD BC,(L5B3E)	; get port for Accelerate key
 	AND L	
 	RET NZ		; Return if not pressed
 	LD HL,LE634	
-	CALL LE5EC	; Play melody
+	CALL PlayMelody	; Play melody
 	BIT 2,(IX+$26)	
 	JR NZ,LE7C2	
 	LD (IX+$0E),$0C	
@@ -1492,10 +1525,10 @@ LE7F1	SET 1,(IX+$26)
 	LD (IX+$06),$04	
 	SET 7,(IX+$10)	
 	RES 0,(IX+$10)	; clear "moving" bit
-	LD A,(L5B10)	; Game level 1..4
+	LD A,(LEVEL)	; Game level 1..4
 	LD C,A	
 	LD A,$05	
-	SUB C		; A = 5 - [Game level]
+	SUB C		; A = 5 - LEVEL
 	LD (IX+$1E),A	
 	LD (IX+$28),$07	
 	RES 3,(IX+$10)	
@@ -1522,10 +1555,10 @@ LE848	SET 1,(IX+$26)
 	LD (IX+$06),$04	
 	SET 7,(IX+$10)	
 	RES 0,(IX+$10)	; clear "moving" bit
-	LD A,(L5B10)	; Game level 1..4
+	LD A,(LEVEL)	; Game level 1..4
 	LD C,A	
 	LD A,$05	
-	SUB C		; A = 5 - [Game level]
+	SUB C		; A = 5 - LEVEL
 	LD (IX+$1E),A	
 	LD (IX+$28),$07	
 	RES 3,(IX+$10)	
@@ -1535,23 +1568,23 @@ LE88A	LD (IX+$1E),$00
 	INC (HL)	
 	DEC HL	
 	DEC HL		; HL = LE630
-	CALL LE5EC	; Play melody
+	CALL PlayMelody	; Play melody
 	LD A,(IX+$1A)	
 	CP $06	
 	JR NZ,$E8FA	
 	LD A,(IX+$03)	
 	CP $07	
 	JR NZ,LE8FA	
-	LD HL,(LDEFF)	; get HELD value
-	LD DE,(L5B44)	; get Score number
+	LD HL,(HELD)	; get HELD value
+	LD DE,(SCORE)	; get Score number
 	ADD HL,DE	
-	LD (L5B44),HL	; set Score number
+	LD (SCORE),HL	; set Score number
 	LD HL,$0000	
-	LD (LDEFF),HL	; reset HELD value
-	CALL LDEF1	; Print HELD number
-	CALL LDEE5	; Print score number
+	LD (HELD),HL	; reset HELD value
+	CALL PrintHeld	; Print HELD number
+	CALL PrintScore	; Print score number
 	LD HL,$FFFF	
-	CALL LDE5D	; Update Oxygen indicator
+	CALL UpdateOxygen	; Update Oxygen indicator
 	RES 6,(IX+$10)	
 	RES 3,(IX+$26)	
 	RES 0,(IX+$26)	
@@ -1562,15 +1595,15 @@ LE88A	LD (IX+$1E),$00
 	CP $03	
 	JR NZ,LE8FA	
 	LD HL,(L5B31)	; get value depending on game level
-	LD DE,(L5B44)	; get Score number
+	LD DE,(SCORE)	; get Score number
 	ADD HL,DE	
-	LD (L5B44),HL	; set Score number
-	CALL LDEE5	; Print score number
+	LD (SCORE),HL	; set Score number
+	CALL PrintScore	; Print score number
 	SET 4,(IX+$26)	
 	LD HL,LE638	
-	CALL LE5EC	; Play melody
+	CALL PlayMelody	; Play melody
 	LD HL,LE638	
-	CALL LE5EC	; Play melody
+	CALL PlayMelody	; Play melody
 LE8FA	LD (IX+$04),$00	
 	LD (IX+$0F),$03	
 	LD (IX+$20),$03	
@@ -1644,7 +1677,7 @@ LE97C	LD (IX+$00),C	; set Column value
 	LD (HL),$00	
 	JP LE418	
 
-; I: IX = Diver object address = LE33B
+; I: IX = Diver object address = DiverObj
 LE9B0	SET 5,(IX+$26)	
 	PUSH HL	
 	PUSH DE	
@@ -1654,7 +1687,7 @@ LE9B0	SET 5,(IX+$26)
 	ADD HL,DE	
 	LD (LDE59),HL	; set address in attributes for Lives indicator
 	LD (HL),$4F	; indicate new value
-	LD HL,L5B37	; address for Number of lives
+	LD HL,LIVES	; address for Number of lives
 	LD A,(HL)	
 	INC (HL)	; one more lives
 	PUSH BC	
@@ -1667,7 +1700,8 @@ LE9B0	SET 5,(IX+$26)
 LE9D1	DEFB $00,$00,$00,$00,$00,$00,$00	
 LE9D8	DEFB $00,$00
 ; Score table, 160 bytes
-LE9DA	DEFB $44,$55,$52,$45,$4C,$4C,$00,$00,$00,$00,$0A,$00,$00,$00,$00,$00	
+ScoreTable ;LE9DA
+	DEFB $44,$55,$52,$45,$4C,$4C,$00,$00,$00,$00,$0A,$00,$00,$00,$00,$00	
 	DEFB $44,$55,$52,$45,$4C,$4C,$00,$00,$00,$00,$0A,$00,$00,$00,$00,$00	
 	DEFB $44,$55,$52,$45,$4C,$4C,$00,$00,$00,$00,$0A,$00,$00,$00,$00,$00	
 	DEFB $44,$55,$52,$45,$4C,$4C,$00,$00,$00,$00,$0A,$00,$00,$00,$00,$00	
@@ -1680,15 +1714,15 @@ LEA6A	DEFB $44,$55,$52,$45,$4C,$4C,$00,$00,$00,$00,$0A,$00,$00,$00,$00,$00
 
 LEA7A	LD (LE9D8),IX	
 	DI	
-	LD HL,(LE9DA+10)	
-	LD DE,(L5B44)	; get Score number
+	LD HL,(ScoreTable+10)	
+	LD DE,(SCORE)	; get Score number
 	LD A,E	
 	SUB L	
 	LD A,D	
 	SBC A,H	
 	JR C,LEADE	
 	EX DE,HL	
-	LD IX,LE9DA	
+	LD IX,ScoreTable	
 	LD DE,$0010	
 	LD B,$0A	; repeat 10 times
 LEA96	LD A,L	
@@ -1703,7 +1737,7 @@ LEAA4	PUSH IX
 	OR A	
 	SBC HL,DE	
 	PUSH HL	
-	LD DE,LE9DA	
+	LD DE,ScoreTable	
 	LD A,$0A	
 	SUB B	
 	ADD A,A	
@@ -1713,7 +1747,7 @@ LEAA4	PUSH IX
 	JR Z,LEABF	
 	LD C,A	
 	LD B,$00	
-	LD HL,LE9DA+16	
+	LD HL,ScoreTable+16	
 	LDIR	
 LEABF	POP HL	
 	LD B,$06	; repeat 6 times
@@ -1730,28 +1764,28 @@ LEAC2	LD (HL),$80
 	INC HL	
 	LD (HL),B	
 	INC HL	
-	LD BC,(L5B44)	; get Score number
+	LD BC,(SCORE)	; get Score number
 	LD (HL),C	
 	INC HL	
 	LD (HL),B	
 ;
-LEADE	LD IX,LE33B	; Diver object address
+LEADE	LD IX,DiverObj	; Diver object address
 	LD (IX+$1F),$07	
 	LD IX,(LE9D8)	
 	LD A,$0F	
 	LD ($5C8D),A	; set ATTR-P - Permanent current colours
 	LD A,$02	
-	CALL $1601	; ROM call CHAN-OPEN
+	CALL ROM_CHANOPEN	; ROM call CHAN-OPEN
 	LD A,$01	
-	CALL $229B	; ROM call inside BORDER subroutine
+	CALL ROM_BORDER1	; ROM call inside BORDER subroutine
 	LD A,$02	
-	CALL $1601	; ROM call CHAN-OPEN
-	CALL $0D6B	; ROM CLS subroutine
+	CALL ROM_CHANOPEN	; ROM call CHAN-OPEN
+	CALL ROM_CLS	; Clear screen
 	LD A,$02	
-	CALL $1601	; ROM call CHAN-OPEN
+	CALL ROM_CHANOPEN	; ROM call CHAN-OPEN
 	LD DE,LEBEE	; Table of records text
 	LD BC,$005D	
-	CALL $203C	; ROM call PR-STRING
+	CALL ROM_PRSTRING	; ROM call PR-STRING
 	LD B,$0A	; loop counter = 10
 	LD C,$05	
 	LD HL,LEA6A	; address of last line of the score table
@@ -1776,9 +1810,9 @@ LEB2B	LD B,$0B
 	PUSH HL	
 	LD BC,$0003	
 	LD DE,LEC4B	
-	CALL $203C	; ROM call PR-STRING
+	CALL ROM_PRSTRING	; ROM call PR-STRING
 	DI	
-	LD IX,LE33B	; Diver object address
+	LD IX,DiverObj	; Diver object address
 	POP HL	
 	LD E,(HL)	
 	INC HL	
@@ -1793,7 +1827,7 @@ LEB2B	LD B,$0B
 	EX DE,HL	
 	LD B,$00	
 	PUSH IY	
-	CALL LDE85	
+	CALL PrintDec	
 	POP IY	
 	POP HL	
 	LD DE,$FFE4	; ???
@@ -1803,12 +1837,12 @@ LEB2B	LD B,$0B
 	ADD HL,DE	
 	POP BC	
 	DJNZ LEB16	
-	LD DE,LEC2A	
+	LD DE,LEC2A	; string with spaces
 	LD BC,$001F	
-	CALL $203C	; ROM call PR-STRING
+	CALL ROM_PRSTRING	; ROM call PR-STRING
 	LD DE,LEC59	; "ENTER SKILL (1TO4),K,L OR S."
 	LD BC,$0023	
-	CALL $203C	; ROM call PR-STRING
+	CALL ROM_PRSTRING	; ROM call PR-STRING
 	EI	
 	RET	
 
@@ -1817,15 +1851,15 @@ LEB84	PUSH BC
 	PUSH HL	
 	LD BC,$0006	
 	LD DE,LEC53	
-	CALL $203C	; ROM call PR-STRING
+	CALL ROM_PRSTRING	; ROM call PR-STRING
 	EI	
-LEB90	LD A,(L5C05)	
-	OR A	
+LEB90	LD A,(KSTATE5)	
+	OR A		; key pressed?
 	JR NZ,LEB90	
-LEB96	LD A,(L5C05)	
-	OR A	
+LEB96	LD A,(KSTATE5)	
+	OR A		; key pressed?
 	JR Z,$EB96	
-	LD A,(L5C08)	; get LAST-K - Last key pressed
+	LD A,(LAST_K)	; get LAST-K - Last key pressed
 	CP $0C	
 	JR Z,LEBB9	
 	CP $0D	
@@ -1855,7 +1889,7 @@ LEBB9	POP HL
 	PUSH BC	
 	LD DE,LEC4E	
 	LD BC,$0005	
-	CALL $203C	; ROM call PR-STRING
+	CALL ROM_PRSTRING	; ROM call PR-STRING
 	POP BC	
 	POP HL	
 	JR LEB84	
@@ -1879,7 +1913,7 @@ LEBDB	PUSH HL
 	LD B,(HL)	
 	INC HL	
 	PUSH HL	
-	CALL $1A1B	; ROM OUT-NUM-1 subroutine
+	CALL ROM_OUTNUM1	; ROM call OUT-NUM-1 subroutine
 	POP HL	
 	RET	
 
@@ -1897,41 +1931,42 @@ LEC59	DEFM $16,$15,$01,$11,$01,$10,$06
 LEC60	DEFM "ENTER SKILL (1TO4),K,L OR S."
 
 ; Redefine keys
-LEC7C	LD A,$02	
-	CALL $1601	; ROM call CHAN-OPEN
+RedefineKeys
+	LD A,$02	
+	CALL ROM_CHANOPEN	; ROM call CHAN-OPEN
 	LD A,$04	
-	CALL $229B	; ROM call inside BORDER subroutine
+	CALL ROM_BORDER1	; ROM call inside BORDER subroutine
 	LD A,$02	
-	CALL $1601	; ROM call CHAN-OPEN
+	CALL ROM_CHANOPEN	; ROM call CHAN-OPEN
 	LD A,$20	
-	LD (L5C8D),A	; set ATTR-P - Permanent current colours
-	CALL $0D6B	; ROM CLS subroutine
+	LD (ATTR_P),A	; set ATTR-P - Permanent current colours
+	CALL ROM_CLS	; Clear screen
 	LD HL,LED23	; UDG symbols used for Redefine keys
-	LD (L5C7B),HL	; set UDG - Address of first user defined graphic
+	LD (UDG),HL	; set UDG - Address of first user defined graphic
 	LD A,$02	
-	CALL $1601	; ROM call CHAN-OPEN
-LEC9E	CALL $02BF	; ROM call KEYBOARD
-	LD A,(L5C05)	
-	OR A	
+	CALL ROM_CHANOPEN	; ROM call CHAN-OPEN
+LEC9E	CALL ROM_KEYBOARD	; scan keyboard
+	LD A,(KSTATE5)	
+	OR A		; key pressed?
 	JR NZ,LEC9E	
 	LD DE,LED43	; text for keys redefining
 	LD BC,$005F	
-	CALL $203C	; ROM call PR-STRING
+	CALL ROM_PRSTRING	; ROM call PR-STRING
 	CALL LECEB	; Sound
 	LD (L5B38),BC	; set port for Clockwise key
 	LD (L5B3A),A	; Save key for Clockwise
 	LD BC,$0012	
-	CALL $203C	; ROM call PR-STRING
+	CALL ROM_PRSTRING	; ROM call PR-STRING
 	CALL LECEB	; Sound
 	LD (L5B3B),BC	; set port for Anticlockwise key
 	LD (L5B3D),A	; Save key for Anticlockwise
 	LD BC,$0012	
-	CALL $203C	; ROM call PR-STRING
+	CALL ROM_PRSTRING	; ROM call PR-STRING
 	CALL LECEB	; Sound
 	LD (L5B3E),BC	; set port for Accelerate key
 	LD (L5B40),A	; Save key for Accelerate
 	LD BC,$000F	
-	CALL $203C	; ROM call PR-STRING
+	CALL ROM_PRSTRING	; ROM call PR-STRING
 	CALL LECEB	; Sound
 	LD (L5B41),BC	; set port for Decelerate
 	LD (L5B43),A	; Save key for Decelerate
@@ -1963,7 +1998,7 @@ LED02	LD E,(HL)
 	INC HL	
 	PUSH BC	
 	EX (SP),HL	
-	CALL $03B5	; ROM BEEPER subroutine
+	CALL ROM_BEEPER	; ROM BEEPER subroutine
 	POP HL	
 	JR LED02	
 LED16	POP DE	
@@ -2004,133 +2039,133 @@ LEDD5	DEFB $12,$80,$01,$1E,$00,$01,$0C,$40
 	DEFB $01,$FF
 
 ; Starting point
-LEDDF	LD A,$08	
-	LD (L5C6A),A	
+Start	LD A,$08	
+	LD (FLAGS2),A	
 	LD A,$02	
-	CALL $1601	; ROM call CHAN-OPEN
+	CALL ROM_CHANOPEN	; ROM call CHAN-OPEN
 	LD A,$0F	
-	LD (L5C8D),A	; set ATTR-P - Permanent current colours
-	LD HL,(L5C78)	; get FRAMES - Frame counter
-	LD (L5B05),HL	; set current random
+	LD (ATTR_P),A		; set ATTR-P - Permanent current colours
+	LD HL,(FRAMES)		; get FRAMES - Frame counter
+	LD (RANDOM),HL		; set current random
 	LD HL,L5B4D	
 	BIT 0,(HL)	
 	JP NZ,LEEA7	
 	SET 0,(HL)	
 	LD DE,LEF70	
 	LD BC,$000F	
-	CALL $203C	; ROM call PR-STRING
-	LD DE,LEC60	; "ENTER SKILL (1TO4),K,L OR S."
+	CALL ROM_PRSTRING	; ROM call PR-STRING
+	LD DE,LEC60		; "ENTER SKILL (1TO4),K,L OR S."
 	LD BC,$001C	
-	CALL $203C	; ROM call PR-STRING
-	LD B,$0A	; repeat 10 times
+	CALL ROM_PRSTRING	; ROM call PR-STRING
+	LD B,$0A		; repeat 10 times
 LEE12	PUSH BC	
 	LD HL,LEDD5	
-	CALL LE5EC	; Play melody
+	CALL PlayMelody		; Play melody
 	POP BC	
 	DJNZ LEE12	
 
 LEE1C	LD HL,$0000	
-	LD (L5C78),HL	; reset FRAMES - Frame counter
+	LD (FRAMES),HL		; reset FRAMES - Frame counter
 LEE22	CALL LEEAD	
-	LD A,(L5C05)	
+	LD A,(KSTATE5)	
 	EI	
-	OR A	
+	OR A			; key pressed?
 	JR NZ,LEE22	
 LEE2C	CALL LEEAD	
-	LD A,(L5C05)	
+	LD A,(KSTATE5)	
 	EI	
-	OR A	
+	OR A			; key pressed?
 	JR Z,LEE2C	
-	LD A,(L5C08)	; get LAST-K - Last key pressed
-	CP $4B		; 'K' ?
+	LD A,(LAST_K)		; get last key pressed
+	CP $4B			; 'K' ?
 	JR NZ,LEE45	
-	CALL LEC7C	; Redefine keys
+	CALL RedefineKeys	; Redefine keys
 	CALL LEADE	
 	JR LEE1C	
-LEE45	CP $4C		; 'L' ?
+LEE45	CP $4C			; 'L' ?
 	JR NZ,LEE75	
-	CALL $0D6B	; ROM CLS subroutine
+	CALL ROM_CLS		; Clear screen
 	LD A,$02	
-	CALL $1601	; ROM call CHAN-OPEN
-	LD DE,LEF93	; "LOAD ? (Y/N)"
+	CALL ROM_CHANOPEN	; ROM call CHAN-OPEN
+	LD DE,LEF93		; "LOAD ? (Y/N)"
 	LD BC,$0013	
-	CALL $203C	; ROM call PR-STRING
-LEE5A	LD A,(L5C05)	
-	OR A	
+	CALL ROM_PRSTRING	; ROM call PR-STRING
+LEE5A	LD A,(KSTATE5)	
+	OR A			; key pressed?
 	JR NZ,LEE5A	
-LEE60	LD A,(L5C05)	
-	OR A	
+LEE60	LD A,(KSTATE5)	
+	OR A			; key pressed?
 	JR NZ,LEE60	
-	LD A,(L5C08)	; get LAST-K - Last key pressed
-	CP $4E		; 'N' ?
+	LD A,(LAST_K)		; get last key pressed
+	CP $4E			; 'N' ?
 	JR Z,LEEA7	
-	CP $59		; 'Y' ?
+	CP $59			; 'Y' ?
 	JR NZ,LEE5A	
-	LD BC,$0000	
-	RET		; Returning to BASIC, loading score table
-LEE75	CP $53		; 'S' ?
+	LD BC,$0000		; return value indicating "load score table"
+	RET			; Returning to BASIC, loading score table
+LEE75	CP $53			; 'S' ?
 	JR NZ,LEE7D	
-	LD BC,$0001	
-	RET		; Returning to BASIC, saving score table
-LEE7D	SUB $31		; -'1'
+	LD BC,$0001		; return value indicating "save score table"
+	RET			; Returning to BASIC, saving score table
+LEE7D	SUB $31			; -'1'
 	JR C,LEE1C	
-	CP $04	
+	CP $04			; >= 4 ?
 	JR NC,LEE1C	
-	INC A		; 1..4
-	LD (L5B10),A	; Save game level 1..4
+	INC A			; 1..4
+	LD (LEVEL),A		; Save game level 1..4
 ; Game level selected, starting the game
 	LD HL,LEDD5	
-	CALL LE5EC	; Play melody
+	CALL PlayMelody		; Play melody
 	LD HL,$0000	
 	LD (L5B46),HL	
 	LD (L5B48),HL	
 	LD HL,(LEA6A+10)	; get High Score value from the score table
-	LD (L5B4B),HL	; set High Score value for indicator
-	CALL LD990	; Game
+	LD (HSCORE),HL		; set High Score value for indicator
+	CALL Game		; Game
 	CALL LEA7A	
 	JP LEE1C	
 LEEA7	CALL LEADE	
 	JP LEE1C	
 
-LEEAD	LD A,(L5C78+1)	; get FRAMES hi byte
+LEEAD	LD A,(FRAMES+1)		; get FRAMES hi byte
 	CP $0A	
 	EI	
 	RET NZ	
 	LD A,$04	
-	LD (L5B10),A	; set Game level = 4
+	LD (LEVEL),A		; set Game level = 4
 	LD A,$0D	
-	CALL LDA39	; Clear screen with attribute A = $0D
+	CALL LDA39		; Clear screen with attribute A = $0D
 	LD A,$01	
 	OUT ($FE),A	
 	PUSH IX	
 	PUSH IY	
 	DI	
-	CALL L9DAA	; Prepare the world mini-map (LAC5D table)
-	CALL LDBC2	; Initialize variables depending of Game level
+	CALL PrepareMiniMap	; Prepare the world MiniMap table
+	CALL InitLevelVars	; Initialize variables depending of Game level
 	CALL LBEDB	
 	LD HL,$0518	
-	LD (L5B03),HL	; set Screen position on mini-map
-	CALL L9C56	; Draw game screen
+	LD (L5B03),HL		; set Screen position on mini-map
+	CALL DrawGameScr	; Draw game screen
 	POP IY	
 	POP IX	
-	LD DE,LEF7F	; "PRESS ANY KEY"
+	LD DE,LEF7F		; "PRESS ANY KEY"
 	LD BC,$0014	
-	CALL $203C	; ROM call PR-STRING
+	CALL ROM_PRSTRING	; ROM call PR-STRING
 	PUSH IX	
 	PUSH IY	
 	LD BC,$001A	
-	LD DE,LDA63	; Procedure Print char and shift down
+	LD DE,LDA63		; Procedure Print char and shift down
 	LD HL,LEF3A	
-	CALL LDA98	; Print string
+	CALL LDA98		; Print string
 	INC HL	
 	LD BC,$001B	
-	CALL LDA9C	; Print string
+	CALL LDA9C		; Print string
 	INC HL	
 	LD BC,$0D1D	
-	CALL LDA9C	; Print string
+	CALL LDA9C		; Print string
 	INC HL	
 	LD BC,$0D1E	
-	CALL LDA9C	; Print string
+	CALL LDA9C		; Print string
 	CALL LBDBA	
 	POP IY	
 	POP IX	
@@ -2145,15 +2180,15 @@ LEF12	PUSH IX
 	POP HL	
 	PUSH HL	
 	POP HL	
-	CALL $02BF	; ROM call KEYBOARD
-	LD A,(L5C05)	
-	OR A	
+	CALL ROM_KEYBOARD	; scan keyboard
+	LD A,(KSTATE5)	
+	OR A			; key pressed?
 	DI	
 	JR Z,LEF12	
 	EI	
 	CALL LEADE	
 	LD HL,$0000	
-	LD (L5C78),HL	; reset FRAMES - Frame counter
+	LD (FRAMES),HL		; reset FRAMES - Frame counter
 	RET	
 
 LEF3A	DEFB $89,$8A,$00,$8B,$8C,$00,$8D,$8E	

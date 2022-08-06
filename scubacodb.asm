@@ -4,15 +4,6 @@
 
 ;----------------------------------------------------------------------------
 
-L5C05	EQU $5C05	; KSTATE5
-L5C08	EQU $5C08	; LAST-K - Last key pressed
-L5C6A	EQU $5C6A	; FLAGS2 - More flags
-L5C78	EQU $5C78	; FRAMES - Frame counter
-L5C7B	EQU $5C7B	; UDG - Address of first user defined graphic
-L5C8D	EQU $5C8D	; ATTR-P - Permanent current colours
-
-;----------------------------------------------------------------------------
-
 	ORG $6000
 
 ;----------------------------------------------------------------------------
@@ -30,7 +21,8 @@ L9C55	DEFB $04	; Octopus phase
 ; Draw game screen
 ; Draws 3x3 blocks = 24x24 tiles, draws Octopus if present, draws static objects on the screen.
 ; I: HL	Screen position on mini-map
-L9C56	DI	
+DrawGameScr
+	DI	
 	LD DE,$4000	; screen pixels start address
 	XOR A	
 	LD (L9C50),A	; no Octopus by default
@@ -44,7 +36,7 @@ L9C69	PUSH BC
 L9C6C	PUSH BC	
 	PUSH IX	
 	EX DE,HL	; now HL = screen position, DE = address on the screen
-	CALL L9D56	; Calc address in LAC5D and Get block number
+	CALL L9D56	; Calc address in MiniMap and Get block number
 	PUSH AF	
 	EX DE,HL	
 	CP $1C		; place for Octopus?
@@ -112,14 +104,14 @@ L9CD5	LD C,$06
 	JR Z,L9CEB	
 	CP $32	
 	JR Z,L9CEB	
-	LD C,$02	
+	LD C,$02	; red on black (color for relief)
 	BIT 7,(IY+$00)	
 	JR Z,L9CEB	
-	LD C,$06	
-L9CEB	LD (IX+$00),C	
+	LD C,$06	; yellow on black
+L9CEB	LD (IX+$00),C	; set screen attribute
 	INC IY	
 	INC IX	
-	INC L	
+	INC L		; next column
 	POP BC	
 	DJNZ L9CAA	; continue horizontal loop for tiles in the block
 	LD BC,$0018	; 24
@@ -164,11 +156,11 @@ L9CEB	LD (IX+$00),C
 L9D38	POP IY	
 L9D3A	POP IX	
 L9D3C	CALL LB0A9	; Draw static objects on the screen; prepare LB07D table
-L9D3F	RET	
+	RET	
 
-; Calculate address in the mini-map (LAC5D table)
+; Calculate address in the MiniMap table
 ; I: HL	H = row, L = column 0..31
-; O: HL = address in the LAC5D table
+; O: HL = address in the MiniMap table
 L9D40	LD A,L	
 	LD L,$00	
 	SRL H	
@@ -179,25 +171,25 @@ L9D40	LD A,L
 	RR L		; HL shifted right 3 bits
 	OR L	
 	LD L,A		; HL := H * 32 + L
-	LD DE,LAC5D	
-	ADD HL,DE	; HL := LAC5D + H * 32 + L
+	LD DE,MiniMap	
+	ADD HL,DE	; HL := MiniMap + H * 32 + L
 	RET	
 
-; Calculate address in the mini-map (LAC5D table) and Get block number
+; Calculate address in the MiniMap table and Get block number
 ; I: H = row, L = column 0..31
 ; O: A = value
 L9D56	PUSH HL	
 	PUSH DE	
-	CALL L9D40	; Calculate address in the mini-map (LAC5D table)
+	CALL L9D40	; Calculate address in the MiniMap table
 	LD A,(HL)	; get value
 	POP DE	
 	POP HL	
 	RET
 
-; Check value in the mini-map (LAC5D table), if row and column in range 0..31
+; Check value in the MiniMap table, if row and column in range 0..31
 ; I: H = row, L = column
 ; If column or row is out of range 0..31 - returns flag Z=0;
-; else, gets value from LAC5D table;
+; else, gets value from MiniMap table;
 ; if this value is $01, returns flag Z=1, in other case flag Z=0.
 L9D5F	PUSH HL	
 	PUSH AF	
@@ -207,7 +199,7 @@ L9D5F	PUSH HL
 	LD A,H	
 	AND $E0		; check Row for range 0..31
 	JR NZ,L9D73	
-	CALL L9D56	; Calc address in LAC5D and Get block number
+	CALL L9D56	; Calc address in MiniMap and Get block number
 	LD L,A	
 	POP AF	
 	DEC L	
@@ -219,12 +211,12 @@ L9D73	POP AF
 	POP HL	
 	RET	
 
-; Calculate address in the mini-map (LAC5D table) and Set block number
+; Calculate address in the MiniMap table and Set block number
 ; I: H = row, L = column 0..31, A = value to set
 L9D79	PUSH HL	
 	PUSH DE	
 	PUSH AF	
-	CALL L9D40	; Calculate address in the mini-map (LAC5D table)
+	CALL L9D40	; Calculate address in the MiniMap table
 	POP AF	
 	LD (HL),A	; set value
 	POP DE	
@@ -233,7 +225,8 @@ L9D79	PUSH HL
 
 ; Random
 ; Calculate next number in pseudo-random sequence
-L9D84	LD HL,(L5B05)	; get current Random
+NextRandom
+	LD HL,(RANDOM)	; get current Random
 	LD D,H	
 	LD E,L	
 	ADD HL,HL	; x2
@@ -256,7 +249,7 @@ L9D84	LD HL,(L5B05)	; get current Random
 	ADD HL,DE	; x1509
 	LD DE,$0029	
 	ADD HL,DE	
-	LD (L5B05),HL	; (L5B05) := (L5B05) * 1509 + 41
+	LD (RANDOM),HL	; (RANDOM) := (RANDOM) * 1509 + 41
 	RET	
 
 L9DA4	DEFB $AF
@@ -268,8 +261,9 @@ L9DA5	LD (HL),A
 	DJNZ L9DA5	
 	RET
 
-; Prepare the mini-map (LAC5D table)
-L9DAA	LD HL,LAC5D+3*32+2	; $ACBF = $AC5D + 3 * 32 + 2: row 3 column 2
+; Prepare the MiniMap table
+PrepareMiniMap
+	LD HL,MiniMap+3*32+2	; $ACBF = $AC5D + 3 * 32 + 2: row 3 column 2
 	LD B,$1C	
 	LD A,$16	
 	CALL L9DA5	; Fill block at $ACBF with $16
@@ -285,7 +279,7 @@ L9DAA	LD HL,LAC5D+3*32+2	; $ACBF = $AC5D + 3 * 32 + 2: row 3 column 2
 	INC HL	
 	INC HL	
 	LD (HL),$02	
-	LD HL,LAC5D+6*32+31	; $AD3C = $AC5D + 6 * 32 + 31; row 6 column 31
+	LD HL,MiniMap+6*32+31	; $AD3C = $AC5D + 6 * 32 + 31; row 6 column 31
 	LD (HL),$06	; ($AD3C) <- $06
 	INC HL	
 	INC HL	
@@ -300,27 +294,27 @@ L9DAA	LD HL,LAC5D+3*32+2	; $ACBF = $AC5D + 3 * 32 + 2: row 3 column 2
 	CALL L9DA5	; Fill block at $AD5D with $01, 256 bytes: fill rows 8..15
 	CALL L9DA5	; Fill block at $AE5D with $01, 256 bytes: fill rows 16..23
 	CALL L9DA5	; Fill block at $AF5D with $01, 256 bytes: fill rows 24..31
-	CALL L9D84	; Random
+	CALL NextRandom	; Random
 	LD A,H	
 	AND $0F		; 0..15
 	ADD A,$07	; A = (Random:H) & 15 + 7 => 7..22
 	LD L,A		; column
 	LD H,$03	; row = 3
 	XOR A	
-	CALL L9D79	; Calc address in LAC5D and Set block number = 0
+	CALL L9D79	; Calc address in MiniMap and Set block number = 0
 	INC L		; next column; column = 4
-	CALL L9D79	; Calc address in LAC5D and Set block number = 0
+	CALL L9D79	; Calc address in MiniMap and Set block number = 0
 	LD H,$05	; row = 5
-	CALL L9D79	; Calc address in LAC5D and set block number = 0
+	CALL L9D79	; Calc address in MiniMap and set block number = 0
 	DEC L		; previous column; column = 3
-	CALL L9D79	; Calc address in LAC5D and Set block number = 0
+	CALL L9D79	; Calc address in MiniMap and Set block number = 0
 	DEC H		; previous row; row = 4
 	LD A,$1C	; $1C = place for Octopus, left block
-	CALL L9D79	; Calc address in LAC5D and Set block number = $1C
+	CALL L9D79	; Calc address in MiniMap and Set block number = $1C
 	INC A		; = $1D = place for Octopus, right block
 	INC L		; next column; column = 4
-	CALL L9D79	; Calc address in LAC5D and Set block number = $1D
-	LD HL,LAC5D+3*32	; $ACBD = $AC5D + 3 * 32: row 3 column 0
+	CALL L9D79	; Calc address in MiniMap and Set block number = $1D
+	LD HL,MiniMap+3*32	; $ACBD = $AC5D + 3 * 32: row 3 column 0
 	LD B,$A0	; repeat 160 times = 5 rows, rows 3..7
 L9E14	LD A,(HL)	; get block number
 	CP $02		; block $02 is dead end to the left, exit to the right
@@ -337,7 +331,7 @@ L9E25	INC HL		; to the next block
 ; Block $02 / $06 / $16 / $1A
 L9E2A	PUSH BC	
 	PUSH HL	
-	CALL L9D84	; Random
+	CALL NextRandom	; Random
 	BIT 5,H	
 	POP HL	
 	POP BC	
@@ -347,22 +341,22 @@ L9E2A	PUSH BC
 ; Coming here after the loop end; continue to build the map
 L9E38	LD A,$02	; initial trunk width
 	LD (L5B09),A	; set trunk width
-	CALL L9D84	; Random
+	CALL NextRandom	; Random
 	LD A,H	
 	AND $0F		; 0..15
 	ADD A,$07	; 7..22
 	LD L,A	
 	LD H,$07	; row = 7
 	XOR A	
-	CALL L9D79	; Calc address in LAC5D and Set block number = 0
+	CALL L9D79	; Calc address in MiniMap and Set block number = 0
 	INC L		; next column
-	CALL L9D79	; Calc address in LAC5D and Set block number = 0
+	CALL L9D79	; Calc address in MiniMap and Set block number = 0
 	INC H		; next row
 	LD A,$1D	; $1D = place for Octopus, right block
-	CALL L9D79	; Calc address in LAC5D and Set block number = $1D - Octopus place
+	CALL L9D79	; Calc address in MiniMap and Set block number = $1D - Octopus place
 	DEC A		; = $1C = place for Octopus, left block
 	DEC L		; previous column
-	CALL L9D79	; Calc address in LAC5D and Set block number = $1C - Octopus place
+	CALL L9D79	; Calc address in MiniMap and Set block number = $1C - Octopus place
 	DEC L		; previous column
 ; Building the labirynth down from the hole with Octopus
 	LD (L5B07),HL	; store the octopus place as the current trunk position
@@ -371,7 +365,7 @@ L9E5F	LD HL,(L5B07)	; get current trunk position
 	LD (L5B07),HL	; set current trunk position
 	LD A,(L5B09)	; get trunk width
 	LD (L5B0A),A	; and save it
-	LD A,(L5B10)	; Game level 1..4
+	LD A,(LEVEL)	; Game level 1..4
 	ADD A,A		; *2
 	ADD A,A		; *4
 	ADD A,$10	; now A = [Game level] * 4 + 16 => 20 / 24 / 28 / 32
@@ -385,7 +379,7 @@ L9E5F	LD HL,(L5B07)	; get current trunk position
 	LD B,A		; B = loop counter
 L9E7D	PUSH HL	
 	PUSH BC	
-	CALL L9D84	; Random
+	CALL NextRandom	; Random
 	LD D,H	
 	POP BC	
 	POP HL	
@@ -394,7 +388,7 @@ L9E7D	PUSH HL
 	BIT 1,D	
 	JR Z,L9E8D	
 	INC A		; change to block $17 - a bit different floor (seabed)
-L9E8D	CALL L9D79	; Calc address in LAC5D and Set block number
+L9E8D	CALL L9D79	; Calc address in MiniMap and Set block number
 	DJNZ L9E7D	
 	CALL LA193	
 	CALL LB1D4	
@@ -402,7 +396,7 @@ L9E8D	CALL L9D79	; Calc address in LAC5D and Set block number
 ; Fill the labirynth on this row level
 L9E99	PUSH HL	
 	PUSH BC	
-	CALL L9D84	; Random
+	CALL NextRandom	; Random
 	POP BC	
 	POP DE	
 	EX DE,HL	
@@ -413,7 +407,7 @@ L9EA6	LD A,$02	; block $02 is dead end to the left, exit to the right
 	BIT 6,D	
 	JR Z,L9EAD	
 	INC A		; change to block $03, same as $02 with a bit different relief
-L9EAD	CALL L9D79	; Calc address in LAC5D and Set block number
+L9EAD	CALL L9D79	; Calc address in MiniMap and Set block number
 	JP L9F0E
 L9EB3	LD A,E	
 	AND $C0	
@@ -427,7 +421,7 @@ L9EB8	BIT 4,E
 	CP C	
 	JR Z,L9ED8	
 	LD A,$05	; block $05 is wall to left/up, exit to right/down
-	CALL L9D79	; Calc address in LAC5D and Set block number
+	CALL L9D79	; Calc address in MiniMap and Set block number
 	DEC L		; previous column
 	LD (L5B07),HL	; set current trunk position
 	INC L		; next column
@@ -449,16 +443,16 @@ L9ED8	LD A,(L5B09)	; get trunk width
 	INC L		; next column
 	LD (L5B07),HL	; set current trunk position
 	LD A,$04	; block $04 is wall to left/down, exit to rigth/up
-	CALL L9D79	; Calc address in LAC5D and Set block number
+	CALL L9D79	; Calc address in MiniMap and Set block number
 	JR L9F0E	
 L9EFB	DEC L		; previous column
-	CALL L9D5F	; Check value in LAC5D table
+	CALL L9D5F	; Check value in MiniMap table
 	PUSH AF	
 	INC L		; next column
 	POP AF	
 	JR NZ,L9EB8	
 	LD A,$0B	; block $0B is floor and ceiling, passage to left/right
-	CALL L9D79	; Calc address in LAC5D and Set block number = $0B
+	CALL L9D79	; Calc address in MiniMap and Set block number = $0B
 	PUSH BC	
 	CALL L9F81	
 	POP BC	
@@ -466,12 +460,12 @@ L9F0E	LD A,(L5B09)	; get trunk width
 	LD B,A		; B = loop counter
 	XOR A	
 L9F13	INC L		; next column
-	CALL L9D79	; Calc address in LAC5D and Set block number = 0
+	CALL L9D79	; Calc address in MiniMap and Set block number = 0
 	DJNZ L9F13	
 	INC L		; next column
 	PUSH HL	
 	PUSH BC	
-	CALL L9D84	; Random
+	CALL NextRandom	; Random
 	POP BC	
 	POP DE	
 	EX DE,HL	
@@ -482,7 +476,7 @@ L9F27	LD A,$06	; block $06 is dead end to the right, exit to the left
 	BIT 6,D	
 	JR NZ,L9F2E	
 	INC A		; change to block $07 - same as $06 with a bit different relief
-L9F2E	CALL L9D79	; Calc address in LAC5D and Set block number
+L9F2E	CALL L9D79	; Calc address in MiniMap and Set block number
 	JP L9F78	
 L9F34	LD A,E	
 	AND $C0	
@@ -495,7 +489,7 @@ L9F39	BIT 4,E
 	LD (L5B0A),A	
 	DEC L	
 	LD A,$08	; block $08 is wall to right/down, exit to left/up
-	CALL L9D79	; Calc address in LAC5D and Set block number = $08
+	CALL L9D79	; Calc address in MiniMap and Set block number = $08
 	JP L9F78	
 L9F4F	LD A,L	
 	CP $1E	
@@ -504,19 +498,19 @@ L9F4F	LD A,L
 	CP C	
 	JR Z,L9F27	
 	LD A,$09	; block $09 is wall to right/up, exit to left/down
-	CALL L9D79	; Calc address in LAC5D and Set block number = $09
+	CALL L9D79	; Calc address in MiniMap and Set block number = $09
 	LD A,(L5B0A)	
 	INC A	
 	LD (L5B0A),A	
 	JP L9F78	
 L9F67	INC L		; next column
-	CALL L9D5F	; Check value in LAC5D table
+	CALL L9D5F	; Check value in MiniMap table
 	PUSH AF	
 	DEC L		; previous column
 	POP AF	
 	JR NZ,L9F39	
 	LD A,$0A	; block $0A is floor and ceiling, passage to left/right
-	CALL L9D79	; Calc address in LAC5D and Set block number = $0A
+	CALL L9D79	; Calc address in MiniMap and Set block number = $0A
 	CALL LA03B	
 L9F78	LD A,(L5B0A)	
 	LD (L5B09),A	; restore trunk width
@@ -525,196 +519,196 @@ L9F78	LD A,(L5B0A)
 L9F81	LD (L5B01),HL	
 L9F84	DEC L	
 	PUSH HL	
-	CALL L9D84	; Random
+	CALL NextRandom	; Random
 	POP DE	
 	EX DE,HL	
 	LD A,D	
 	AND $02		; check bit 1
 	JR NZ,L9FEB	
 L9F90	DEC L	
-	CALL L9D5F	; Check value in LAC5D table
+	CALL L9D5F	; Check value in MiniMap table
 	JR Z,L9FC0	
 	LD A,L	
 	CP $FF	
 	JR NZ,L9FB6	
 	LD L,$1F	
-	CALL L9D56	; Calc address in LAC5D and Get block number
+	CALL L9D56	; Calc address in MiniMap and Get block number
 	CP $14	
 	JR NZ,L9FB4	
 	LD A,$0B	
-	CALL L9D79	; Calc address in LAC5D and Set block number
+	CALL L9D79	; Calc address in MiniMap and Set block number
 	LD L,$00	
 	LD A,$0A	
-	CALL L9D79	; Calc address in LAC5D and Set block number
+	CALL L9D79	; Calc address in MiniMap and Set block number
 	LD HL,(L5B01)	
 	RET	
 L9FB4	LD L,$FF	
 L9FB6	INC L	
 	LD A,$15	
-	CALL L9D79	; Calc address in LAC5D and Set block number
+	CALL L9D79	; Calc address in MiniMap and Set block number
 	LD HL,(L5B01)	
 	RET	
 L9FC0	INC L	
 	BIT 7,E	
 	JR Z,L9FE0	
 	DEC H	
-	CALL L9D56	; Calc address in LAC5D and Get block number
+	CALL L9D56	; Calc address in MiniMap and Get block number
 	INC H	
 	SUB $10	
 	JR C,L9FE0	
 	CP $04	
 	JR NC,L9FE0	
 	LD A,$18	
-	CALL L9D79	; Calc address in LAC5D and Set block number
+	CALL L9D79	; Calc address in MiniMap and Set block number
 	DEC H	
 	INC A	
-	CALL L9D79	; Calc address in LAC5D and Set block number
+	CALL L9D79	; Calc address in MiniMap and Set block number
 	INC H	
 	JP L9F84	
 L9FE0	LD A,D	
 	AND $03		; 0..3
 	ADD A,$10	; $10..$13
-	CALL L9D79	; Calc address in LAC5D and Set block number
+	CALL L9D79	; Calc address in MiniMap and Set block number
 	JP L9F84	
 L9FEB	BIT 6,E	
 	JR NZ,LA011	
 	INC H	
-	CALL L9D5F	; Check value in LAC5D table
+	CALL L9D5F	; Check value in MiniMap table
 	JR Z,L9FF8	
 	DEC H	
 	JR L9F90	
 L9FF8	DEC L	
-	CALL L9D5F	; Check value in LAC5D table
+	CALL L9D5F	; Check value in MiniMap table
 	JR Z,LA002	
 	INC L	
 	DEC H	
 	JR L9F90	
 LA002	INC L	
 	LD A,$0D	
-	CALL L9D79	; Calc address in LAC5D and Set block number
+	CALL L9D79	; Calc address in MiniMap and Set block number
 	DEC H	
 	DEC A	
-	CALL L9D79	; Calc address in LAC5D and Set block number
+	CALL L9D79	; Calc address in MiniMap and Set block number
 	INC H	
 	JP L9F84	
 LA011	LD A,$09	
 	CP H	
 	JP Z,L9F90	
 	DEC H	
-	CALL L9D5F	; Check value in LAC5D table
+	CALL L9D5F	; Check value in MiniMap table
 	JR Z,LA021	
 	INC H	
 	JP L9F90	
 LA021	DEC L	
-	CALL L9D5F	; Check value in LAC5D table
+	CALL L9D5F	; Check value in MiniMap table
 	JR Z,LA02C	
 	INC L	
 	INC H	
 	JP L9F90	
 LA02C	LD A,$0E	
 	INC L	
-	CALL L9D79	; Calc address in LAC5D and Set block number
+	CALL L9D79	; Calc address in MiniMap and Set block number
 	INC H	
 	INC A	
-	CALL L9D79	; Calc address in LAC5D and Set block number
+	CALL L9D79	; Calc address in MiniMap and Set block number
 	DEC H	
 	JP L9F84	
 
 LA03B	LD (L5B01),HL	
 LA03E	INC L	
 	PUSH HL	
-	CALL L9D84	; Random
+	CALL NextRandom	; Random
 	POP DE	
 	EX DE,HL	
 	LD A,D	
 	AND $04		; check bit 2
 	JR NZ,LA0A5	
 LA04A	INC L	
-	CALL L9D5F	; Check value in LAC5D table
+	CALL L9D5F	; Check value in MiniMap table
 	JR Z,LA079	
 	LD A,L	
 	AND $1F		; 0..31
 	JR NZ,LA06F	
 	LD L,A	
-	CALL L9D56	; Calc address in LAC5D and Get block number
+	CALL L9D56	; Calc address in MiniMap and Get block number
 	CP $15	
 	JR NZ,LA06D	
 	LD A,$0A	
-	CALL L9D79	; Calc address in LAC5D and Set block number
+	CALL L9D79	; Calc address in MiniMap and Set block number
 	LD L,$1F	
 	LD A,$0B	
-	CALL L9D79	; Calc address in LAC5D and Set block number
+	CALL L9D79	; Calc address in MiniMap and Set block number
 	LD HL,(L5B01)	
 	RET	
 LA06D	LD L,$20	
 LA06F	DEC L	
 	LD A,$14	
-	CALL L9D79	; Calc address in LAC5D and Set block number
+	CALL L9D79	; Calc address in MiniMap and Set block number
 	LD HL,(L5B01)	
 	RET	
 LA079	DEC L	
 	BIT 7,E	
 	JR Z,LA09A	
 	DEC H	
-	CALL L9D56	; Calc address in LAC5D and Get block number
+	CALL L9D56	; Calc address in MiniMap and Get block number
 	INC H	
 	SUB $10	
 	JR C,LA09A	
 	CP $04	
 	JR NC,LA09A	
 	LD A,$18	
-	CALL L9D79	; Calc address in LAC5D and Set block number
+	CALL L9D79	; Calc address in MiniMap and Set block number
 	DEC H	
 	LD A,$19	
-	CALL L9D79	; Calc address in LAC5D and Set block number
+	CALL L9D79	; Calc address in MiniMap and Set block number
 	INC H	
 	JP LA03E	
 LA09A	LD A,D	
 	AND $03		; 0..3
 	ADD A,$10	; $10..$13
-	CALL L9D79	; Calc address in LAC5D and Set block number
+	CALL L9D79	; Calc address in MiniMap and Set block number
 	JP LA03E	
 LA0A5	BIT 6,E	
 	JR NZ,LA0CB	
 	INC H	
-	CALL L9D5F	; Check value in LAC5D table
+	CALL L9D5F	; Check value in MiniMap table
 	JR Z,LA0B2	
 	DEC H	
 	JR LA04A	
 LA0B2	INC L	
-	CALL L9D5F	; Check value in LAC5D table
+	CALL L9D5F	; Check value in MiniMap table
 	JR Z,LA0BC	
 	DEC L	
 	DEC H	
 	JR LA04A	
 LA0BC	DEC L	
 	LD A,$0F	
-	CALL L9D79	; Calc address in LAC5D and Set block number
+	CALL L9D79	; Calc address in MiniMap and Set block number
 	DEC H	
 	DEC A	
-	CALL L9D79	; Calc address in LAC5D and Set block number
+	CALL L9D79	; Calc address in MiniMap and Set block number
 	INC H	
 	JP LA03E	
 LA0CB	LD A,$09	
 	CP H	
 	JP Z,LA04A	
 	DEC H	
-	CALL L9D5F	; Check value in LAC5D table
+	CALL L9D5F	; Check value in MiniMap table
 	JR Z,LA0DB	
 	INC H	
 	JP LA04A	
 LA0DB	INC L	
-	CALL L9D5F	; Check value in LAC5D table
+	CALL L9D5F	; Check value in MiniMap table
 	JR Z,LA0E6	
 	INC H	
 	DEC L	
 	JP LA04A	
 LA0E6	LD A,$0C	
 	DEC L	
-	CALL L9D79	; Calc address in LAC5D and Set block number
+	CALL L9D79	; Calc address in MiniMap and Set block number
 	INC H	
 	INC A	
-	CALL L9D79	; Calc address in LAC5D and Set block number
+	CALL L9D79	; Calc address in MiniMap and Set block number
 	DEC H	
 	JP LA03E	
 
@@ -730,7 +724,7 @@ LA0F5	PUSH HL
 	RR L
 	SRL H
 	RR L
-	LD DE,LAC5D	
+	LD DE,MiniMap	
 	ADD HL,DE	
 	LD H,(HL)	
 	POP DE	
@@ -850,7 +844,7 @@ LA1A2	INC L
 	LD A,$80	; end of list marker
 	LD (DE),A	
 	RET	
-LA1B0	CALL L9D56	; Calc address in LAC5D and Get block number
+LA1B0	CALL L9D56	; Calc address in MiniMap and Get block number
 	LD C,A	
 	PUSH HL	
 	CP $14	
@@ -928,7 +922,7 @@ LA209	LD A,(HL)
 	PUSH HL	
 	PUSH DE	
 	PUSH BC	
-	CALL L9D84	; Random
+	CALL NextRandom	; Random
 	POP BC	
 	POP DE	
 	LD A,H	
@@ -981,7 +975,7 @@ LA249	INC DE
 	EX (SP),HL	
 	LD (DE),A	
 	INC DE	
-	LD A,(L5B05)	; get current Random lo byte
+	LD A,(RANDOM)	; get current Random lo byte
 	AND $7F		; 0..127
 	LD (DE),A	
 	INC DE	
@@ -1213,7 +1207,7 @@ LB1D4	PUSH IY
 	XOR A	
 	LD (LB210),A	
 LB1DE	LD IY,LA27E	; Table of static objects on the map
-LB1E2	CALL L9D84	; Random
+LB1E2	CALL NextRandom	; Random
 	LD A,H	
 	AND $03		; 0..3
 	ADD A,$03	; 3..6
@@ -1300,7 +1294,7 @@ LB27E	ADD HL,DE
 LB286	PUSH HL	
 	PUSH DE	
 	PUSH BC	
-	CALL L9D84	; Random
+	CALL NextRandom	; Random
 	POP BC	
 	POP DE	
 	LD A,H	
@@ -1391,7 +1385,7 @@ LB306	DEFB $00,$00,$00,$60,$00,$78,$0C,$38	; sprB306
 LB316	DEFB $09	
 
 ; Process Octopus, draw if needed
-LB317	LD A,(L9C50)	
+LB317	LD A,(L9C50)	; get Octopus flag
 	OR A	
 	RET Z	
 	LD HL,LB316	
@@ -2653,7 +2647,7 @@ LBD83	LD A,L
 	INC A	
 	LD (IX+$0F),A	
 	PUSH DE	
-	CALL L9D84	; Random
+	CALL NextRandom	; Random
 	LD A,H	
 	AND $07		; 0..7
 LBD9B	LD HL,LBDAA	; !!! mutable argument
@@ -2829,7 +2823,7 @@ LBEF3	PUSH BC
 	LD BC,$0015	
 	LDIR	
 	PUSH DE	
-	CALL L9D84	; Random
+	CALL NextRandom	; Random
 	POP DE	
 	LD (IX+$00),H	
 	LD C,$3F	
@@ -2839,7 +2833,7 @@ LBEF3	PUSH BC
 	LD A,(L5B14)	
 	LD B,A	
 	LD C,$00	
-	LD A,(L5B05)	; get current Random lo byte
+	LD A,(RANDOM)	; get current Random lo byte
 	BIT 5,A	
 	JR Z,LBF1D	
 	INC C	
@@ -2850,7 +2844,7 @@ LBF1D	PUSH BC
 	LD BC,$0015	
 	LDIR	
 	PUSH DE	
-	CALL L9D84	; Random
+	CALL NextRandom	; Random
 	POP DE	
 	LD (IX+$00),H	
 	LD A,L	
@@ -2906,7 +2900,7 @@ LBFB0	LD (LBFC3+1),IY
 	LD B,A	
 LBFB8	PUSH BC	
 	PUSH DE	
-	CALL L9D84	; Random
+	CALL NextRandom	; Random
 	LD A,H	
 	AND $0E	
 	LD E,A	
@@ -2926,11 +2920,11 @@ LBFC3	LD HL,$0000	; !!! mutable argument
 	LD HL,($C007)	
 	LD (IX+$16),H	
 	LD (IX+$15),L	
-	LD A,(L5B05)	; get current Random lo byte
+	LD A,(RANDOM)	; get current Random lo byte
 	AND $7F		; 0..127
 	ADD A,$40	; 64..191
 	LD (IX+$00),A	
-	LD A,(L5B05+1)	; get current Random hi byte
+	LD A,(RANDOM+1)	; get current Random hi byte
 	SRL A	
 	SRL A	
 	SRL A	
@@ -2940,7 +2934,7 @@ LBFC3	LD HL,$0000	; !!! mutable argument
 	SUB H	
 	LD (IX+$01),A	
 	PUSH DE	
-	CALL L9D84	; Random
+	CALL NextRandom	; Random
 	POP DE	
 	LD C,$0F	
 	CALL LBD83	
@@ -2954,7 +2948,7 @@ LC009	LD B,A
 	LD (IY+$05),E	
 	LD (IY+$06),D	
 	LD DE,$F8F8	
-	LD HL,LAC5D+$3FF	
+	LD HL,MiniMap+$3FF	
 LC016	LD A,(HL)	
 	CP (IY+$00)	
 	JR Z,LC039	
@@ -2972,12 +2966,12 @@ LC021	DEC HL
 	CP $38	
 	JR NZ,LC037	
 	LD D,$F8	
-	LD HL,LAC5D+$3FF	
+	LD HL,MiniMap+$3FF	
 LC037	JR LC016	
 LC039	PUSH BC	
 	PUSH HL	
 	PUSH DE	
-	CALL L9D84	; Random
+	CALL NextRandom	; Random
 	LD D,(IY+$03)	
 	LD E,(IY+$02)	
 	LD A,L	
@@ -3012,7 +3006,7 @@ LC04F	LD A,H
 	LD A,E	
 	ADD A,$04	
 	LD (IX+$00),A	
-	LD A,(L5B05+1)	; get current Random hi byte
+	LD A,(RANDOM+1)	; get current Random hi byte
 	LD L,A	
 	LD C,(IY+$07)	
 	CALL LBD83	
