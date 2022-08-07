@@ -23,34 +23,34 @@ L9C55	DEFB $04	; Octopus phase
 ; I: HL	Screen position on mini-map
 DrawGameScr
 	DI	
-	LD DE,$4000	; screen pixels start address
+	LD DE,$4000		; screen pixels start address
 	XOR A	
-	LD (L9C50),A	; no Octopus by default
+	LD (L9C50),A		; no Octopus by default
 	PUSH IX	
 	PUSH IY	
-	LD IX,$5800	; screen attributes start address
-	LD B,$03	; loop counter; game screen 3 blocks high = 24 tiles
-	EX DE,HL	; now DE = screen position, HL = address on the screen
+	LD IX,$5800		; screen attributes start address
+	LD B,$03		; loop counter; game screen 3 blocks high = 24 tiles
+	EX DE,HL		; now DE = screen position, HL = address on the screen
 L9C69	PUSH BC	
-	LD B,$03	; loop counter; game screen 3 blocks wide = 24 tiles
+	LD B,$03		; loop counter; game screen 3 blocks wide = 24 tiles
 L9C6C	PUSH BC	
 	PUSH IX	
-	EX DE,HL	; now HL = screen position, DE = address on the screen
+	EX DE,HL		; now HL = screen position, DE = address on the screen
 	CALL MiniMap_Get	; Calc address in MiniMap and Get block number
 	PUSH AF	
 	EX DE,HL	
-	CP $1C		; place for Octopus?
-	JR NZ,L9C89	; no => skip
-	LD (L9C51),HL	; save the Octopus screen address
+	CP $1C			; place for Octopus?
+	JR NZ,L9C89		; no => skip
+	LD (L9C51),HL		; save the Octopus screen address
 	PUSH HL	
 	LD HL,LA41B	
 	LD (L9C53),HL	
 	POP HL	
-	LD A,$01	; flag value
-	LD (L9C50),A	; we have the Octopus on the screen
+	LD A,$01		; flag value
+	LD (L9C50),A		; we have the Octopus on the screen
 L9C89	INC E	
 	LD A,E	
-	AND $1F		; 0..31
+	AND $1F			; 0..31
 	LD E,A	
 	POP AF	
 	PUSH DE	
@@ -62,39 +62,39 @@ L9C89	INC E
 	RR L	
 	SRL H	
 	RR L	
-	LD DE,LA4DD	; base address for relief blocks, 8x8 tiles each block
-	ADD HL,DE	; now HL = address of the block
+	LD DE,LA4DD		; base address for relief blocks, 8x8 tiles each block
+	ADD HL,DE		; now HL = address of the block
 	PUSH HL	
-	POP IY		; now IY = address of the block
+	POP IY			; now IY = address of the block
 	POP HL	
-	LD B,$08	; repeat 8 times - block height in tiles
+	LD B,$08		; repeat 8 times - block height in tiles
 L9CA7	PUSH BC	
-	LD B,$08	; repeat 8 times - block width in tiles
+	LD B,$08		; repeat 8 times - block width in tiles
 L9CAA	PUSH BC	
-	LD A,(IY+$00)	; get tile number
+	LD A,(IY+$00)		; get tile number
 	PUSH HL	
 	PUSH HL	
-	AND $7F		; 0..127
+	AND $7F			; 0..127
 	LD L,A	
 	LD H,$00	
 	ADD HL,HL	
 	ADD HL,HL	
-	ADD HL,HL	; *8
-	LD BC,L9134	; base address for relief tiles, 8x8 pixels each tile
-	ADD HL,BC	; now HL = tile address
+	ADD HL,HL		; *8
+	LD BC,L9134		; base address for relief tiles, 8x8 pixels each tile
+	ADD HL,BC		; now HL = tile address
 	POP DE	
-	LD B,$08	; repeat 8 times - tile height
-L9CBF	LD A,(HL)	; get tile pixels
-	LD (DE),A	; write to the screen
-	INC HL		; next tile byte
-	INC D		; next pixel row
+	LD B,$08		; repeat 8 times - tile height
+L9CBF	LD A,(HL)		; get tile pixels
+	LD (DE),A		; write to the screen
+	INC HL			; next tile byte
+	INC D			; next pixel row
 	DJNZ L9CBF	
 	POP HL	
-	LD A,(L5B03+1)	; get Screen position on mini-map, row value
+	LD A,(L5B03+1)		; get Screen position on mini-map, row value
 	OR A	
 	JR NZ,L9CD5	
 	LD A,H	
-	AND $18		; 0 / 8 / 16 / 24
+	AND $18			; 0 / 8 / 16 / 24
 	JR NZ,L9CD5	
 	LD C,$29	
 	JR L9CEB	
@@ -104,17 +104,17 @@ L9CD5	LD C,$06
 	JR Z,L9CEB	
 	CP $32	
 	JR Z,L9CEB	
-	LD C,$02	; red on black (color for relief)
+	LD C,$02		; red on black (color for relief)
 	BIT 7,(IY+$00)	
 	JR Z,L9CEB	
-	LD C,$06	; yellow on black
-L9CEB	LD (IX+$00),C	; set screen attribute
+	LD C,$06		; yellow on black
+L9CEB	LD (IX+$00),C		; set screen attribute
 	INC IY	
 	INC IX	
-	INC L		; next column
+	INC L			; next column
 	POP BC	
-	DJNZ L9CAA	; continue horizontal loop for tiles in the block
-	LD BC,$0018	; 24
+	DJNZ L9CAA		; continue horizontal loop for tiles in the block
+	LD BC,$0018		; 24
 	ADD IX,BC	
 	DEC L	
 	LD A,L	
@@ -122,7 +122,7 @@ L9CEB	LD (IX+$00),C	; set screen attribute
 	ADD A,$20	
 	LD L,A	
 	POP BC	
-	DJNZ L9CA7	; continue vertical loop for tiles in the block
+	DJNZ L9CA7		; continue vertical loop for tiles in the block
 	POP HL	
 	LD BC,$0008	
 	ADD HL,BC	
@@ -131,7 +131,7 @@ L9CEB	LD (IX+$00),C	; set screen attribute
 	ADD IX,BC	
 	POP BC	
 	DEC B	
-	JP NZ,L9C6C	; continue horizontal loop for blocks on the screen
+	JP NZ,L9C6C		; continue horizontal loop for blocks on the screen
 	LD L,$00	
 	LD A,H	
 	ADD A,$08	
@@ -143,19 +143,19 @@ L9CEB	LD (IX+$00),C	; set screen attribute
 	DEC E	
 	DEC E	
 	LD A,E	
-	AND $1F		; 0..31
+	AND $1F			; 0..31
 	LD E,A	
 	POP BC	
 	DEC B	
-	JP NZ,L9C69	; continue vertical lool for blocks on the screen
-	LD A,(L9C50)	; get Octopus flag
-	OR A		; do we have the Octopus on the screen?
-	JR Z,L9D38	; no => skip
-	LD A,(L9C55)	; get Octopus phase
-	CALL LB346	; Draw Octopus
+	JP NZ,L9C69		; continue vertical lool for blocks on the screen
+	LD A,(L9C50)		; get Octopus flag
+	OR A			; do we have the Octopus on the screen?
+	JR Z,L9D38		; no => skip
+	LD A,(L9C55)		; get Octopus phase
+	CALL LB346		; Draw Octopus
 L9D38	POP IY	
 L9D3A	POP IX	
-L9D3C	CALL LB0A9	; Draw static objects on the screen; prepare LB07D table
+L9D3C	CALL LB0A9		; Draw static objects on the screen; prepare LB07D table
 	RET	
 
 ; Calculate address in the MiniMap table
@@ -169,11 +169,11 @@ MiniMap_Addr
 	SRL H	
 	RR L	
 	SRL H	
-	RR L		; HL shifted right 3 bits
+	RR L			; HL shifted right 3 bits
 	OR L	
-	LD L,A		; HL := H * 32 + L
+	LD L,A			; HL := H * 32 + L
 	LD DE,MiniMap	
-	ADD HL,DE	; HL := MiniMap + H * 32 + L
+	ADD HL,DE		; HL := MiniMap + H * 32 + L
 	RET	
 
 ; Calculate address in the MiniMap table and Get block number
@@ -222,7 +222,7 @@ MiniMap_Set
 	PUSH AF	
 	CALL MiniMap_Addr	; Calculate address in the MiniMap table
 	POP AF	
-	LD (HL),A	; set value
+	LD (HL),A		; set value
 	POP DE	
 	POP HL	
 	RET
@@ -230,39 +230,40 @@ MiniMap_Set
 ; Random
 ; Calculate next number in pseudo-random sequence
 NextRandom
-	LD HL,(RANDOM)	; get current Random
+	LD HL,(RANDOM)		; get current Random
 	LD D,H	
 	LD E,L	
-	ADD HL,HL	; x2
-	ADD HL,HL	; x4
-	ADD HL,HL	; x8
-	ADD HL,HL	; x16
+	ADD HL,HL		; x2
+	ADD HL,HL		; x4
+	ADD HL,HL		; x8
+	ADD HL,HL		; x16
 	PUSH HL	
-	ADD HL,HL	; x32
+	ADD HL,HL		; x32
 	EX (SP),HL	
 	OR A	
-	SBC HL,DE	; HL = x15
-	POP BC		; BC = x32
-	ADD HL,BC	; x47
-	ADD HL,HL	; x94
-	ADD HL,HL	; x188
-	ADD HL,HL	; x376
-	ADD HL,DE	; x377
-	ADD HL,HL	; x754
-	ADD HL,HL	; x1508
-	ADD HL,DE	; x1509
+	SBC HL,DE		; HL = x15
+	POP BC			; BC = x32
+	ADD HL,BC		; x47
+	ADD HL,HL		; x94
+	ADD HL,HL		; x188
+	ADD HL,HL		; x376
+	ADD HL,DE		; x377
+	ADD HL,HL		; x754
+	ADD HL,HL		; x1508
+	ADD HL,DE		; x1509
 	LD DE,$0029	
 	ADD HL,DE	
-	LD (RANDOM),HL	; (RANDOM) := (RANDOM) * 1509 + 41
+	LD (RANDOM),HL		; (RANDOM) := (RANDOM) * 1509 + 41
 	RET	
 
 L9DA4	DEFB $AF
 
 ; Fill block at HL with A
 ; I: HL = block address, A = value, B = length of the block to fill
-L9DA5	LD (HL),A	
+FillBlock
+	LD (HL),A	
 	INC HL	
-	DJNZ L9DA5	
+	DJNZ FillBlock	
 	RET
 
 ; Prepare the MiniMap table
@@ -270,16 +271,16 @@ PrepareMiniMap
 	LD HL,MiniMap+3*32+2	; $ACBF = $AC5D + 3 * 32 + 2: row 3 column 2
 	LD B,$1C	
 	LD A,$16	
-	CALL L9DA5		; Fill block at $ACBF with $16
+	CALL FillBlock		; Fill block at $ACBF with $16
 	LD (HL),$06		; ($ACDB) <- $06
 	INC HL			; HL = $ACDC
 	LD B,$22	
 	LD A,$01	
-	CALL L9DA5		; Fill block at $ACDC with $01
+	CALL FillBlock		; Fill block at $ACDC with $01
 	INC HL			; HL = $ACFF
 	LD A,$1A	
 	LD B,$1C	
-	CALL L9DA5		; Fill block at $ACFF with $1A
+	CALL FillBlock		; Fill block at $ACFF with $1A
 	INC HL	
 	INC HL	
 	LD (HL),$02	
@@ -290,15 +291,15 @@ PrepareMiniMap
 	INC HL			; HL = $AD3F
 	LD B,$1C	
 	LD A,$16	
-	CALL L9DA5		; Fill block at $AD3F with $16
+	CALL FillBlock		; Fill block at $AD3F with $16
 	INC HL	
 	INC HL			; HL = $AD5D; $AD5D = $AC5D + $100: row 8 column 0
 	LD B,$00	
 	LD A,$01	
-	CALL L9DA5		; Fill block at $AD5D with $01, 256 bytes: fill rows 8..15
-	CALL L9DA5		; Fill block at $AE5D with $01, 256 bytes: fill rows 16..23
-	CALL L9DA5		; Fill block at $AF5D with $01, 256 bytes: fill rows 24..31
-	CALL NextRandom		; Random
+	CALL FillBlock		; Fill block at $AD5D with $01, 256 bytes: fill rows 8..15
+	CALL FillBlock		; Fill block at $AE5D with $01, 256 bytes: fill rows 16..23
+	CALL FillBlock		; Fill block at $AF5D with $01, 256 bytes: fill rows 24..31
+	CALL NextRandom		; Calculate next random value
 	LD A,H	
 	AND $0F			; 0..15
 	ADD A,$07		; A = (Random:H) & 15 + 7 => 7..22
@@ -335,7 +336,7 @@ L9E25	INC HL			; to the next block
 ; Block $02 / $06 / $16 / $1A
 L9E2A	PUSH BC	
 	PUSH HL	
-	CALL NextRandom		; Random
+	CALL NextRandom		; Calculate next random value
 	BIT 5,H	
 	POP HL	
 	POP BC	
@@ -345,7 +346,7 @@ L9E2A	PUSH BC
 ; Coming here after the loop end; continue to build the map
 L9E38	LD A,$02		; initial trunk width
 	LD (L5B09),A		; set trunk width
-	CALL NextRandom		; Random
+	CALL NextRandom		; Calculate next random value
 	LD A,H	
 	AND $0F			; 0..15
 	ADD A,$07		; 7..22
@@ -369,7 +370,7 @@ L9E5F	LD HL,(L5B07)		; get current trunk position
 	LD (L5B07),HL		; set current trunk position
 	LD A,(L5B09)		; get trunk width
 	LD (L5B0A),A		; and save it
-	LD A,(LEVEL)		; Game level 1..4
+	LD A,(LEVEL)		; LEVEL
 	ADD A,A			; *2
 	ADD A,A			; *4
 	ADD A,$10		; now A = [Game level] * 4 + 16 => 20 / 24 / 28 / 32
@@ -383,7 +384,7 @@ L9E5F	LD HL,(L5B07)		; get current trunk position
 	LD B,A			; B = loop counter
 L9E7D	PUSH HL	
 	PUSH BC	
-	CALL NextRandom		; Random
+	CALL NextRandom		; Calculate next random value
 	LD D,H	
 	POP BC	
 	POP HL	
@@ -400,17 +401,17 @@ L9E8D	CALL MiniMap_Set	; Calc address in MiniMap and Set block number
 ; Fill the labyrinth on this row level
 L9E99	PUSH HL	
 	PUSH BC	
-	CALL NextRandom	; Random
+	CALL NextRandom		; Calculate next random value
 	POP BC	
 	POP DE	
 	EX DE,HL	
 	LD A,D	
-	AND $07		; 0..7
+	AND $07			; 0..7
 	JR NZ,L9EB3	
-L9EA6	LD A,$02	; block $02 is dead end to the left, exit to the right
+L9EA6	LD A,$02		; block $02 is dead end to the left, exit to the right
 	BIT 6,D	
 	JR Z,L9EAD	
-	INC A		; change to block $03, same as $02 with a bit different relief
+	INC A			; change to block $03, same as $02 with a bit different relief
 L9EAD	CALL MiniMap_Set	; Calc address in MiniMap and Set block number
 	JP L9F0E
 L9EB3	LD A,E	
@@ -424,16 +425,16 @@ L9EB8	BIT 4,E
 	LD A,H	
 	CP C	
 	JR Z,L9ED8	
-	LD A,$05	; block $05 is wall to left/up, exit to right/down
+	LD A,$05		; block $05 is wall to left/up, exit to right/down
 	CALL MiniMap_Set	; Calc address in MiniMap and Set block number
-	DEC L		; previous column
-	LD (L5B07),HL	; set current trunk position
-	INC L		; next column
+	DEC L			; previous column
+	LD (L5B07),HL		; set current trunk position
+	INC L			; next column
 	LD A,(L5B0A)	
 	INC A	
 	LD (L5B0A),A	
 	JP L9F0E	
-L9ED8	LD A,(L5B09)	; get trunk width
+L9ED8	LD A,(L5B09)		; get trunk width
 	ADD A,L	
 	CP $1E	
 	JR Z,L9EA6	
@@ -442,44 +443,44 @@ L9ED8	LD A,(L5B09)	; get trunk width
 	JR Z,L9EA6	
 	LD (L5B0A),A	
 	LD A,(L5B09)	
-	DEC A		; decrease trunk width
+	DEC A			; decrease trunk width
 	LD (L5B09),A	
-	INC L		; next column
-	LD (L5B07),HL	; set current trunk position
-	LD A,$04	; block $04 is wall to left/down, exit to rigth/up
+	INC L			; next column
+	LD (L5B07),HL		; set current trunk position
+	LD A,$04		; block $04 is wall to left/down, exit to rigth/up
 	CALL MiniMap_Set	; Calc address in MiniMap and Set block number
 	JR L9F0E	
-L9EFB	DEC L		; previous column
+L9EFB	DEC L			; previous column
 	CALL MiniMap_Check	; Check value in MiniMap table
 	PUSH AF	
-	INC L		; next column
+	INC L			; next column
 	POP AF	
 	JR NZ,L9EB8	
-	LD A,$0B	; block $0B is floor and ceiling, passage to left/right
+	LD A,$0B		; block $0B is floor and ceiling, passage to left/right
 	CALL MiniMap_Set	; Calc address in MiniMap and Set block number = $0B
 	PUSH BC	
 	CALL L9F81	
 	POP BC	
-L9F0E	LD A,(L5B09)	; get trunk width
-	LD B,A		; B = loop counter
+L9F0E	LD A,(L5B09)		; get trunk width
+	LD B,A			; B = loop counter
 	XOR A	
-L9F13	INC L		; next column
+L9F13	INC L			; next column
 	CALL MiniMap_Set	; Calc address in MiniMap and Set block number = 0
 	DJNZ L9F13	
-	INC L		; next column
+	INC L			; next column
 	PUSH HL	
 	PUSH BC	
-	CALL NextRandom	; Random
+	CALL NextRandom		; Calculate next random value
 	POP BC	
 	POP DE	
 	EX DE,HL	
 	LD A,D	
-	AND $07		; 0..7
+	AND $07			; 0..7
 	JR NZ,L9F34	
-L9F27	LD A,$06	; block $06 is dead end to the right, exit to the left
+L9F27	LD A,$06		; block $06 is dead end to the right, exit to the left
 	BIT 6,D	
 	JR NZ,L9F2E	
-	INC A		; change to block $07 - same as $06 with a bit different relief
+	INC A			; change to block $07 - same as $06 with a bit different relief
 L9F2E	CALL MiniMap_Set	; Calc address in MiniMap and Set block number
 	JP L9F78	
 L9F34	LD A,E	
@@ -492,7 +493,7 @@ L9F39	BIT 4,E
 	JR Z,L9F4F	
 	LD (L5B0A),A	
 	DEC L	
-	LD A,$08	; block $08 is wall to right/down, exit to left/up
+	LD A,$08		; block $08 is wall to right/down, exit to left/up
 	CALL MiniMap_Set	; Calc address in MiniMap and Set block number = $08
 	JP L9F78	
 L9F4F	LD A,L	
@@ -501,33 +502,33 @@ L9F4F	LD A,L
 	LD A,H	
 	CP C	
 	JR Z,L9F27	
-	LD A,$09	; block $09 is wall to right/up, exit to left/down
+	LD A,$09		; block $09 is wall to right/up, exit to left/down
 	CALL MiniMap_Set	; Calc address in MiniMap and Set block number = $09
 	LD A,(L5B0A)	
 	INC A	
 	LD (L5B0A),A	
 	JP L9F78	
-L9F67	INC L		; next column
+L9F67	INC L			; next column
 	CALL MiniMap_Check	; Check value in MiniMap table
 	PUSH AF	
-	DEC L		; previous column
+	DEC L			; previous column
 	POP AF	
 	JR NZ,L9F39	
-	LD A,$0A	; block $0A is floor and ceiling, passage to left/right
+	LD A,$0A		; block $0A is floor and ceiling, passage to left/right
 	CALL MiniMap_Set	; Calc address in MiniMap and Set block number = $0A
 	CALL LA03B	
 L9F78	LD A,(L5B0A)	
-	LD (L5B09),A	; restore trunk width
-	JP L9E5F	; continue the loop by mini-map rows
+	LD (L5B09),A		; restore trunk width
+	JP L9E5F		; continue the loop by mini-map rows
 
 L9F81	LD (L5B01),HL	
 L9F84	DEC L	
 	PUSH HL	
-	CALL NextRandom	; Random
+	CALL NextRandom		; Calculate next random value
 	POP DE	
 	EX DE,HL	
 	LD A,D	
-	AND $02		; check bit 1
+	AND $02			; check bit 1
 	JR NZ,L9FEB	
 L9F90	DEC L	
 	CALL MiniMap_Check	; Check value in MiniMap table
@@ -570,8 +571,8 @@ L9FC0	INC L
 	INC H	
 	JP L9F84	
 L9FE0	LD A,D	
-	AND $03		; 0..3
-	ADD A,$10	; $10..$13
+	AND $03			; 0..3
+	ADD A,$10		; $10..$13
 	CALL MiniMap_Set	; Calc address in MiniMap and Set block number
 	JP L9F84	
 L9FEB	BIT 6,E	
@@ -621,17 +622,17 @@ LA02C	LD A,$0E
 LA03B	LD (L5B01),HL	
 LA03E	INC L	
 	PUSH HL	
-	CALL NextRandom	; Random
+	CALL NextRandom		; Calculate next random value
 	POP DE	
 	EX DE,HL	
 	LD A,D	
-	AND $04		; check bit 2
+	AND $04			; check bit 2
 	JR NZ,LA0A5	
 LA04A	INC L	
 	CALL MiniMap_Check	; Check value in MiniMap table
 	JR Z,LA079	
 	LD A,L	
-	AND $1F		; 0..31
+	AND $1F			; 0..31
 	JR NZ,LA06F	
 	LD L,A	
 	CALL MiniMap_Get	; Calc address in MiniMap and Get block number
@@ -668,8 +669,8 @@ LA079	DEC L
 	INC H	
 	JP LA03E	
 LA09A	LD A,D	
-	AND $03		; 0..3
-	ADD A,$10	; $10..$13
+	AND $03			; 0..3
+	ADD A,$10		; $10..$13
 	CALL MiniMap_Set	; Calc address in MiniMap and Set block number
 	JP LA03E	
 LA0A5	BIT 6,E	
@@ -729,13 +730,13 @@ LA0F5	PUSH HL
 	SRL H
 	RR L
 	LD DE,MiniMap	
-	ADD HL,DE	; now HL = address in MiniMap
-	LD H,(HL)	; get block number from MiniMap
-	POP DE		; restore row/column
-	LD A,E		; get column
-	AND $07		; 0..7
+	ADD HL,DE		; now HL = address in MiniMap
+	LD H,(HL)		; get block number from MiniMap
+	POP DE			; restore row/column
+	LD A,E			; get column
+	AND $07			; 0..7
 	LD E,A	
-	LD A,D		; get row
+	LD A,D			; get row
 	RRCA	
 	RRCA	
 	RRCA	
@@ -748,16 +749,17 @@ LA0F5	PUSH HL
 	LD A,L	
 	OR E	
 	LD L,A	
-	LD DE,LA4DD	; address of relief bblocks
-	ADD HL,DE	; now HL = address in the block
+	LD DE,LA4DD		; address of relief bblocks
+	ADD HL,DE		; now HL = address in the block
 	RET	
 
 ; Calculate address in relief block and Get tile nummber
 ; I: HL = Char coords: H = row, L = column
-LA129	PUSH HL	
+GetTileInBlock
+	PUSH HL	
 	PUSH DE	
-	CALL LA0F5	; Calculate address in relief block
-	LD A,(HL)	; get tile number
+	CALL LA0F5		; Calculate address in relief block
+	LD A,(HL)		; get tile number
 	POP DE	
 	POP HL	
 	RET
@@ -768,7 +770,8 @@ LA132	DEFB $E5,$D5,$F5,$CD,$F5,$A0,$F1,$5F
 	DEFB $E1,$C9
 
 ; Get screen attribute address
-LA14C	PUSH DE	
+GetScrAttrAddr
+	PUSH DE	
 	LD A,L	
 	LD L,$00	
 	SRL H	
@@ -779,7 +782,7 @@ LA14C	PUSH DE
 	RR L	
 	OR L	
 	LD L,A	
-	LD DE,$5800	
+	LD DE,$5800		; Screen attributes area
 	ADD HL,DE	
 	POP DE	
 	RET
@@ -787,10 +790,11 @@ LA14C	PUSH DE
 ; Convert char coords HL to ZX screen address
 ; I: HL = Char coords: H = row 0..23, L = column 0..31
 ; O: HL	= address on the ZX screen
-LA164	PUSH DE	
+GetScrAddr
+	PUSH DE	
 	LD A,H	
 	LD D,A	
-	AND $18		; 0 / 8 / 16 / 24
+	AND $18			; 0 / 8 / 16 / 24
 	SET 6,A	
 	LD H,A	
 	LD A,D	
@@ -806,8 +810,9 @@ LA164	PUSH DE
 ; Draw tile 16x8 at the screen
 ; I: HL = Char coords: H = row 0..23, L = column 0..31
 ; I: DE = Tile address; 16 bytes
-LA176	CALL LA164	; Convert char coords HL to ZX screen address
-	LD B,$08	; repeat 8 times
+DrawTile16x8
+	CALL GetScrAddr		; Convert char coords HL to ZX screen address
+	LD B,$08		; repeat 8 times
 LA17B	LD A,(DE)	
 	LD (HL),A	
 	INC DE	
@@ -823,8 +828,9 @@ LA17B	LD A,(DE)
 ; Draw tile 8x8 at the screen
 ; I: HL = Char coords: H = row 0..23, L = column 0..31
 ; I: DE = Tile address; 8 bytes
-LA187	CALL LA164	; Convert char coords HL to ZX screen address
-	LD B,$08	; repeat 8 times
+DrawTile8x8
+	CALL GetScrAddr		; Convert char coords HL to ZX screen address
+	LD B,$08		; repeat 8 times
 LA18C	LD A,(DE)	
 	LD (HL),A	
 	INC DE	
@@ -833,19 +839,19 @@ LA18C	LD A,(DE)
 	RET
 
 LA193	LD HL,$20FF	
-	LD DE,LA27E	; Table of static objects on the map
+	LD DE,TableStatics	; Table of static objects on the map
 	XOR A	
 	LD (L5B00),A	
 	LD A,$03	
 	LD (L5B0F),A	
 LA1A2	INC L	
 	LD A,L	
-	AND $1F		; 0..31
+	AND $1F			; 0..31
 	JR NZ,LA1B0	
 	LD L,A	
 	DEC H	
 	JR NZ,LA1B0	
-	LD A,$80	; end of list marker
+	LD A,$80		; end of list marker
 	LD (DE),A	
 	RET	
 LA1B0	CALL MiniMap_Get	; Calc address in MiniMap and Get block number
@@ -905,7 +911,7 @@ LA1F6	LD H,C
 	PUSH HL	
 	ADD HL,BC	
 	POP BC	
-	LD B,$10	; repeat 16 times
+	LD B,$10		; repeat 16 times
 LA209	LD A,(HL)	
 	INC HL	
 	INC C	
@@ -921,17 +927,17 @@ LA209	LD A,(HL)
 	CP $04	
 	JR NC,LA278	
 	LD A,C	
-	AND $07		; 0..7
+	AND $07			; 0..7
 	JR Z,LA278	
 	PUSH HL	
 	PUSH DE	
 	PUSH BC	
-	CALL NextRandom	; Random
+	CALL NextRandom		; Calculate next random value
 	POP BC	
 	POP DE	
 	LD A,H	
 	POP HL	
-	AND $02		; check bit 1
+	AND $02			; check bit 1
 	JR NZ,LA278	
 	LD A,(L5B00)	
 	INC A	
@@ -950,7 +956,7 @@ LA249	INC DE
 	LD A,C	
 	DEC A	
 	DEC A	
-	AND $07		; 0..7
+	AND $07			; 0..7
 	PUSH DE	
 	LD D,A	
 	LD A,L	
@@ -979,8 +985,8 @@ LA249	INC DE
 	EX (SP),HL	
 	LD (DE),A	
 	INC DE	
-	LD A,(RANDOM)	; get current Random lo byte
-	AND $7F		; 0..127
+	LD A,(RANDOM)		; get current Random lo byte
+	AND $7F			; 0..127
 	LD (DE),A	
 	INC DE	
 	INC HL	
@@ -997,7 +1003,8 @@ LA278	DJNZ LA209
 ;        bit 5 = oxygen;
 ;        bit 6 = chest;
 ;        bit 7 = end of list
-LA27E	DEFB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00	
+TableStatics
+	DEFB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00	
 	DEFB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00	
 	DEFB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00	
 	DEFB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00	
@@ -1045,7 +1052,7 @@ LA41B	DEFB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
 ;----------------------------------------------------------------------------
 
 ; Table of objects on the screen
-; Bytes #0,1: record address in LA27E; bytes #2,3: column and row
+; Bytes #0,1: record address in TableStatics; bytes #2,3: column and row
 LB07D	DEFB $01,$01,$01,$01	
 	DEFB $01,$21,$01,$01	
 	DEFB $01,$01,$01,$01	
@@ -1059,118 +1066,118 @@ LB07D	DEFB $01,$01,$01,$01
 	DEFB $03,$00,$00,$00	
 
 ; Draw static objects on the screen; prepare LB07D table
-LB0A9	LD DE,(L5B03)	; get Screen position on mini-map
-	LD A,D		; get row
+LB0A9	LD DE,(L5B03)		; get Screen position on mini-map
+	LD A,D			; get row
 	RLCA	
 	RLCA	
-	RLCA		; *8
+	RLCA			; *8
 	LD D,A	
 	LD A,E	
 	RLCA	
 	RLCA	
-	RLCA		; *8
+	RLCA			; *8
 	LD E,A	
-	LD (L5B0B),DE	; set screen position on 256x256 map
-	LD HL,LA27E	; Table of static objects on the map
+	LD (L5B0B),DE		; set screen position on 256x256 map
+	LD HL,TableStatics	; Table of static objects on the map
 	DI	
 	PUSH IY	
-	LD IY,LB07D	; Table of objects on the screen
-LB0C5	BIT 7,(HL)	; end of objects list?
-	JR Z,LB0D0	; no => jump
-	LD (IY+$01),$FF	; address hi := 255 - end of list marker in LB07D table
+	LD IY,LB07D		; Table of objects on the screen
+LB0C5	BIT 7,(HL)		; end of objects list?
+	JR Z,LB0D0		; no => jump
+	LD (IY+$01),$FF		; address hi := 255 - end of list marker in LB07D table
 	POP IY	
 	RET	
 LB0D0	PUSH HL	
 	PUSH DE	
 	RES 0,(HL)	
 	INC HL	
-	LD A,(HL)	; get column 0..255
-	SUB E		; minus screen row
-	CP $18		; within the screen?
-	JR NC,LB148	; no => skip
-	LD E,A		; now E = column on the screen, 0..23
+	LD A,(HL)		; get column 0..255
+	SUB E			; minus screen row
+	CP $18			; within the screen?
+	JR NC,LB148		; no => skip
+	LD E,A			; now E = column on the screen, 0..23
 	INC HL	
-	LD A,(HL)	; get row 0..255
-	SUB D		; minus screen column
-	CP $18		; within the screen?
-	JR NC,LB148	; no => skip
-	LD D,A		; now D = row on the screen, 0..23
+	LD A,(HL)		; get row 0..255
+	SUB D			; minus screen column
+	CP $18			; within the screen?
+	JR NC,LB148		; no => skip
+	LD D,A			; now D = row on the screen, 0..23
 	PUSH DE	
-	DEC HL		; back to column 
-	DEC HL		; back to flags
+	DEC HL			; back to column 
+	DEC HL			; back to flags
 	LD (IY+$00),L	
-	LD (IY+$01),H	; store record address
+	LD (IY+$01),H		; store record address
 	LD (IY+$02),E	
-	LD (IY+$03),D	; store position
+	LD (IY+$03),D		; store position
 	INC IY	
 	INC IY	
 	INC IY	
-	INC IY		; next record
+	INC IY			; next record
 	SET 0,(HL)	
-	LD C,$46	; screen attribute for chest
-	LD DE,LB1B4	; Sprite 16x8 Chest
-	BIT 6,(HL)	; check "chest" bit
-	JR NZ,LB151	; chest => draw the chest
-	LD C,$47	; screen attribute for oxygen
-	LD DE,LB1AC	; Sprite 8x8 Oxygen
-	BIT 5,(HL)	; check "oxygen" bit
-	JR NZ,LB160	; oxygen => draw the oxygen
-	LD C,$07	; screen attribute for shells
-	BIT 1,(HL)	; check "big/small" bit
-	JR Z,LB121	; big => draw big shell
-	LD DE,LB1CC	; Sprite 8x8 Small shell opened
-	BIT 3,(HL)	; check "closed/opened" bit
-	JR Z,LB160	; open => draw the small shell
-	LD DE,LB1C4	; Sprite 8x8 Small shell closed
-	JR LB160	; => draw the small shell
+	LD C,$46		; screen attribute for chest
+	LD DE,LB1B4		; Sprite 16x8 Chest
+	BIT 6,(HL)		; check "chest" bit
+	JR NZ,LB151		; chest => draw the chest
+	LD C,$47		; screen attribute for oxygen
+	LD DE,LB1AC		; Sprite 8x8 Oxygen
+	BIT 5,(HL)		; check "oxygen" bit
+	JR NZ,LB160		; oxygen => draw the oxygen
+	LD C,$07		; screen attribute for shells
+	BIT 1,(HL)		; check "big/small" bit
+	JR Z,LB121		; big => draw big shell
+	LD DE,LB1CC		; Sprite 8x8 Small shell opened
+	BIT 3,(HL)		; check "closed/opened" bit
+	JR Z,LB160		; open => draw the small shell
+	LD DE,LB1C4		; Sprite 8x8 Small shell closed
+	JR LB160		; => draw the small shell
 ; Draw Big shell	
-LB121	LD DE,LB16C	; Sprite 16x16 Big shell opened
-	BIT 3,(HL)	; check "closed/opened" bit
+LB121	LD DE,LB16C		; Sprite 16x16 Big shell opened
+	BIT 3,(HL)		; check "closed/opened" bit
 	JR Z,LB12B	
-	LD DE,LB18C	; Sprite 16x16 Big shell closed
-LB12B	POP HL		; restore (row, column)
-	PUSH HL		; save again
-	CALL LA14C	; Get screen attribute address
-	LD (HL),C	; set screen attribute
+	LD DE,LB18C		; Sprite 16x16 Big shell closed
+LB12B	POP HL			; restore (row, column)
+	PUSH HL			; save again
+	CALL GetScrAttrAddr	; Get screen attribute address
+	LD (HL),C		; set screen attribute
 	INC HL	
-	LD (HL),C	; set screen attribute
+	LD (HL),C		; set screen attribute
 	PUSH BC	
 	LD BC,$0020	
 	OR A	
-	SBC HL,BC	; one char line up
+	SBC HL,BC		; one char line up
 	POP BC	
-	LD (HL),C	; set screen attribute
+	LD (HL),C		; set screen attribute
 	DEC HL	
-	LD (HL),C	; set screen attribute
-	POP HL		; restore (row, column)
-	PUSH HL		; save again
-	CALL LA176	; Draw tile 16x8 at the screen
-	POP HL		; restore (row, column)
-	DEC H		; One char line up
-	CALL LA176	; Draw tile 16x8 at the screen
+	LD (HL),C		; set screen attribute
+	POP HL			; restore (row, column)
+	PUSH HL			; save again
+	CALL DrawTile16x8	; Draw tile 16x8 at the screen
+	POP HL			; restore (row, column)
+	DEC H			; One char line up
+	CALL DrawTile16x8	; Draw tile 16x8 at the screen
 LB148	POP DE	
 	POP HL	
-	LD BC,$0004	; record size
-	ADD HL,BC	; next record
-	JP LB0C5	; continue the loop
+	LD BC,$0004		; record size
+	ADD HL,BC		; next record
+	JP LB0C5		; continue the loop
 ; Draw Chest object
 LB151	LD A,(HL)	
-	POP HL		; restore (row, column)
-	PUSH HL		; save again
-	CALL LA14C	; Get screen attribute address
-	LD (HL),C	; set screen attribute
+	POP HL			; restore (row, column)
+	PUSH HL			; save again
+	CALL GetScrAttrAddr	; Get screen attribute address
+	LD (HL),C		; set screen attribute
 	INC HL	
-	LD (HL),C	; set screen attribute
-	POP HL		; restore (row, column)
-	CALL LA176	; Draw tile 16x8 at the screen
+	LD (HL),C		; set screen attribute
+	POP HL			; restore (row, column)
+	CALL DrawTile16x8	; Draw tile 16x8 at the screen
 	JR LB148	
 ; Draw Oxygen or Small shell
-LB160	POP HL		; restore (row, column)
-	PUSH HL		; save again
-	CALL LA14C	; Get screen attribute address
-	LD (HL),C	; set screen attribute
-	POP HL		; restore (row, column)
-	CALL LA187	; Draw tile 8x8 at the screen
+LB160	POP HL			; restore (row, column)
+	PUSH HL			; save again
+	CALL GetScrAttrAddr	; Get screen attribute address
+	LD (HL),C		; set screen attribute
+	POP HL			; restore (row, column)
+	CALL DrawTile8x8	; Draw tile 8x8 at the screen
 	JR LB148	
 
 ;----------------------------------------------------------------------------
@@ -1210,19 +1217,19 @@ LB1D4	PUSH IY
 	NOP	
 	XOR A	
 	LD (LB210),A	
-LB1DE	LD IY,LA27E	; Table of static objects on the map
-LB1E2	CALL NextRandom	; Random
+LB1DE	LD IY,TableStatics	; Table of static objects on the map
+LB1E2	CALL NextRandom		; Calculate next random value
 	LD A,H	
-	AND $03		; 0..3
-	ADD A,$03	; 3..6
+	AND $03			; 0..3
+	ADD A,$03		; 3..6
 	LD B,A	
-	LD DE,$0004	; record size
-LB1EE	ADD IY,DE	; next record
+	LD DE,$0004		; record size
+LB1EE	ADD IY,DE		; next record
 	DJNZ LB1EE	
-	LD A,(IY+$02)	; get row 0..255
-	CP $48		; < 72 ? (top 9 blocks = top 3 screens)
-	JR C,LB1DE	; yes => jump
-	LD A,(IY+$00)	; get flags
+	LD A,(IY+$02)		; get row 0..255
+	CP $48			; < 72 ? (top 9 blocks = top 3 screens)
+	JR C,LB1DE		; yes => jump
+	LD A,(IY+$00)		; get flags
 	AND $60	
 	JR NZ,LB1E2	
 	LD (IY+$00),$20	
@@ -1238,12 +1245,12 @@ LB210	DEFB $00
 LB211	DEFB $08
 LB212	DEFB $05
 
-LB213	CALL LB2C0	; Octopus delay and process
+LB213	CALL LB2C0		; Octopus delay and process
 	LD HL,LB211	
 	DEC (HL)	
 	RET NZ	
 	DI	
-	LD A,(L5B0D)	; get value 7 / 5 / 3 / 1, depending on Game level 1..4
+	LD A,(L5B0D)		; get value 7 / 5 / 3 / 1, depending on LEVEL
 	LD (HL),A	
 	LD A,(LB212)	
 	BIT 7,A	
@@ -1261,7 +1268,7 @@ LB237	LD (LB212),A
 	PUSH IY	
 	LD IY,LB079	
 LB240	LD DE,$0004	
-	LD BC,(L5B0B)	; get screen position on 256x256 map
+	LD BC,(L5B0B)		; get screen position on 256x256 map
 LB247	ADD IY,DE	
 	LD L,(IY+$00)	
 	LD H,(IY+$01)	
@@ -1278,9 +1285,9 @@ LB257	BIT 5,(HL)
 	JR NZ,LB247	
 	LD L,(IY+$02)	
 	LD H,(IY+$03)	
-	CALL LA14C	; Get screen attribute address
+	CALL GetScrAttrAddr	; Get screen attribute address
 	LD A,(LB212)	
-	AND $07		; 0..7
+	AND $07			; 0..7
 	LD (HL),A	
 	INC HL	
 	LD (HL),A	
@@ -1298,13 +1305,13 @@ LB27E	ADD HL,DE
 LB286	PUSH HL	
 	PUSH DE	
 	PUSH BC	
-	CALL NextRandom	; Random
+	CALL NextRandom		; Calculate next random value
 	POP BC	
 	POP DE	
 	LD A,H	
 	POP HL	
-	AND $7F		; 0..127
-	ADD A,$80	
+	AND $7F			; 0..127
+	ADD A,$80		; 128..255
 	LD (HL),A	
 	DEC HL	
 	LD A,(HL)	
@@ -1322,16 +1329,16 @@ LB286	PUSH HL
 	PUSH HL	
 	EX DE,HL	
 	JR Z,LB2B1	
-	LD DE,LB2EE	; sprite 8x8 address, 8 bytes
-	CALL LB2CE	; Draw tile 8x8 with XOR
+	LD DE,LB2EE		; sprite 8x8 address, 8 bytes
+	CALL DrawTileXor8x8	; Draw tile 8x8 with XOR
 	POP HL	
 	JR LB240	
-LB2B1	LD DE,LB2F6	; sprite 16x16 address, 32 bytes
+LB2B1	LD DE,LB2F6		; sprite 16x16 address, 32 bytes
 	PUSH HL	
-	CALL LB2DB	; Draw tile 16x8 with XOR
+	CALL DrawTileXor16x8	; Draw tile 16x8 with XOR
 	POP HL	
-	DEC H		; one line upper
-	CALL LB2DB	; Draw tile 16x8 with XOR
+	DEC H			; one line upper
+	CALL DrawTileXor16x8	; Draw tile 16x8 with XOR
 	POP HL	
 	JR LB240	
 
@@ -1339,17 +1346,18 @@ LB2B1	LD DE,LB2F6	; sprite 16x16 address, 32 bytes
 LB2C0	LD HL,LB2CD	
 	DEC (HL)	
 	RET NZ	
-	LD A,(L5B0E)	; get value 10 / 8 / 6 / 4, depending on Game level 1..4
+	LD A,(L5B0E)		; get value 10 / 8 / 6 / 4, depending on LEVEL
 	LD (HL),A	
-	CALL LB317	; Process Octopus, draw if needed
+	CALL LB317		; Process Octopus, draw if needed
 	RET	
 LB2CD	DEFB $08
 
 ; Draw tile 8x8 with XOR
 ; I: HL = Char coords: H = 0..23, L = 0..31
 ; I: DE = Tile address
-LB2CE	CALL LA164	; Convert char coords HL to ZX screen address
-	LD B,$08	; tile height 8 pixels
+DrawTileXor8x8
+	CALL GetScrAddr		; Convert char coords HL to ZX screen address
+	LD B,$08		; tile height 8 pixels
 LB2D3	LD A,(DE)	
 	XOR (HL)	
 	LD (HL),A	
@@ -1361,8 +1369,9 @@ LB2D3	LD A,(DE)
 ; Draw tile 16x8 with XOR
 ; I: HL = Char coords: H = 0..23, L = 0..31
 ; I: DE = Tile address
-LB2DB	CALL LA164	; Convert char coords HL to ZX screen address
-	LD B,$08	; tile height 8 pixels
+DrawTileXor16x8
+	CALL GetScrAddr		; Convert char coords HL to ZX screen address
+	LD B,$08		; tile height 8 pixels
 LB2E0	LD A,(DE)	
 	XOR (HL)	
 	LD (HL),A	
@@ -1389,14 +1398,14 @@ LB306	DEFB $00,$00,$00,$60,$00,$78,$0C,$38	; sprB306
 LB316	DEFB $09	
 
 ; Process Octopus, draw if needed
-LB317	LD A,(L9C50)	; get Octopus flag
+LB317	LD A,(L9C50)		; get Octopus flag
 	OR A	
 	RET Z	
 	LD HL,LB316	
 	DEC (HL)	
 	RET NZ	
 	LD (HL),$10	
-	LD A,(L9C55)	; get Octopus phase
+	LD A,(L9C55)		; get Octopus phase
 	LD B,A	
 	BIT 7,A	
 	JR NZ,LB339	
@@ -1419,17 +1428,17 @@ LB345	LD A,B
 ;
 ; Entry point to draw Octopus
 ; I: A = Octopus phase
-LB346	LD (L9C55),A	; set Octopus phase
-	LD HL,L8D74	; Base address for Octopus sprites
-	AND $07		; 0..7
+LB346	LD (L9C55),A		; set Octopus phase
+	LD HL,L8D74		; Base address for Octopus sprites
+	AND $07			; 0..7
 	LD B,A	
 	OR A	
 	JR Z,LB358	
-	LD DE,$00C0	; address shift between phases
+	LD DE,$00C0		; address shift between phases
 LB355	ADD HL,DE	
 	DJNZ LB355	
-LB358	EX DE,HL	; now DE = Octopus sprite address
-	CALL LB35D	; Draw Octopus sprite on the screen
+LB358	EX DE,HL		; now DE = Octopus sprite address
+	CALL LB35D		; Draw Octopus sprite on the screen
 	RET	
 
 ; Draw Octopus sprite on the screen
@@ -1438,40 +1447,40 @@ LB35D	DI
 	PUSH IY	
 	LD IY,(L9C53)	
 	LD (L9C53),DE	
-	LD HL,(L9C51)	; get the Octopus screen address
+	LD HL,(L9C51)		; get the Octopus screen address
 	INC HL	
 	INC HL	
-	LD C,$04	; repeat 4 times - height
-LB36F	LD B,$06	; repeat 6 times - width
+	LD C,$04		; repeat 4 times - height
+LB36F	LD B,$06		; repeat 6 times - width
 	PUSH HL	
 LB372	PUSH BC	
-	LD B,$08	; repeat 8 times
+	LD B,$08		; repeat 8 times
 	PUSH HL	
-LB376	LD A,(DE)	; get pixels
-	XOR (HL)	; XOR with screen pixels
+LB376	LD A,(DE)		; get pixels
+	XOR (HL)		; XOR with screen pixels
 	XOR (IY+$00)	
-	LD (HL),A	; write to the screen
+	LD (HL),A		; write to the screen
 	INC DE	
 	INC IY	
-	INC H		; next pixel row
+	INC H			; next pixel row
 	DJNZ LB376	
 	POP HL	
-	INC L		; next column
+	INC L			; next column
 	POP BC	
-	DJNZ LB372	; continue by columns
+	DJNZ LB372		; continue by columns
 	POP HL	
 	LD A,L	
 	ADD A,$20	
 	LD L,A	
 	DEC C	
-	JR NZ,LB36F	; continue by rows
+	JR NZ,LB36F		; continue by rows
 	POP IY	
 	RET
 
 LB392	DEFB $00,$00,$00,$00,$00,$00,$00,$00	
 	DEFB $32,$32,$32,$1D,$02,$32
 
-; I: IX = object record address
+; I: IX = record address in block LC4F0
 ; I: IY = ???
 LB3A0	BIT 4,(IX+$0D)	
 	JR Z,LB3AB
@@ -1583,21 +1592,21 @@ LB466	RR (HL)
 	POP HL	
 	RET
 
-; I: IX = object record address
-; I: IY = ???
+; I: IX = record address in block LC4F0
+; I: IY = record address in block LC092
 LB470	BIT 0,(IX+$0D)	
 	JR Z,LB479	
 	CALL LB3A0	
 LB479	LD D,(IX+$08)	
-	LD E,(IX+$07)	
+	LD E,(IX+$07)		; get address
 	BIT 1,(IX+$0D)	
 	JR NZ,LB496	
 	PUSH DE	
 	LD C,(IY+$09)	
-	LD L,(IY+$0A)	; get record size
+	LD L,(IY+$0A)		; get record size ??
 	XOR A	
-LB48D	LD B,L		; loop counter = record size
-LB48E	LD (DE),A	; clear the record
+LB48D	LD B,L			; loop counter = record size
+LB48E	LD (DE),A		; clear the record
 	INC DE	
 	DJNZ LB48E	
 	DEC C	
@@ -1608,24 +1617,24 @@ LB496	LD HL,(LB7B9)
 	JR NZ,LB4A2	
 	LD HL,LA41B	
 LB4A2	LD B,(IY+$07)	
-LB4A5	LD A,(IY+$02)	; get column
-	AND $E0		; check column for 0..31 range
+LB4A5	LD A,(IY+$02)		; get column
+	AND $E0			; check column for 0..31 range
 	JR Z,LB4B4	
-	INC (IY+$02)	; incremment column
+	INC (IY+$02)		; incremment column
 	INC DE	
 	INC HL	
 	DEC B	
 	JR LB4A5	
 LB4B4	LD A,(IY+$06)	
-	ADD A,(IY+$02)	; add column
+	ADD A,(IY+$02)		; add column
 	LD C,A	
-LB4BB	CP $18		; < 24 ?
+LB4BB	CP $18			; < 24 ?
 	JR C,LB4C4	
 	DEC C	
 	DEC B	
 	LD A,C	
 	JR LB4BB	
-LB4C4	LD (IY+$0E),B	; set width
+LB4C4	LD (IY+$0E),B		; set width
 	LD A,(IY+$07)	
 	SUB B	
 	LD (IY+$0F),A	
@@ -1634,37 +1643,37 @@ LB4C4	LD (IY+$0E),B	; set width
 	POP IX	
 	LD B,(IY+$09)	
 LB4D6	PUSH BC	
-LB4D7	LD A,(IY+$03)	; get row
-	CP $18		; < 24 ?
+LB4D7	LD A,(IY+$03)		; get row
+	CP $18			; < 24 ?
 	JR C,LB4F0	
-	INC (IY+$03)	; increment row
+	INC (IY+$03)		; increment row
 	POP BC	
 	DEC B	
 	PUSH BC	
-	LD L,(IY+$0A)	; get record size
+	LD L,(IY+$0A)		; get record size
 	LD H,$00	
 	EX DE,HL	
 	ADD HL,DE	
 	ADD IX,DE	
 	EX DE,HL	
 	JR LB4D7	
-LB4F0	LD L,(IY+$02)	; get colummn
-	LD H,(IY+$03)	; get row
-	CALL LA164	; Convert char coords HL to ZX screen address
-	LD B,$08	; repeat 8 times
+LB4F0	LD L,(IY+$02)		; get colummn
+	LD H,(IY+$03)		; get row
+	CALL GetScrAddr		; Convert char coords HL to ZX screen address
+	LD B,$08		; repeat 8 times
 LB4FB	PUSH BC	
 	PUSH HL	
-	LD B,(IY+$0E)	; width as loop counter
+	LD B,(IY+$0E)		; width as loop counter
 LB500	LD A,(DE)	
-	XOR (HL)	; XOR with pixels on the screen
+	XOR (HL)		; XOR with pixels on the screen
 	LD (IY+$07),A	
 	CPL	
 	AND (IX+$00)	
 	LD (DE),A	
 	LD A,(IX+$00)	
 	OR (IY+$07)	
-	LD (HL),A	; set pixels on the screen
-	INC L		; next column
+	LD (HL),A		; set pixels on the screen
+	INC L			; next column
 	INC DE	
 	INC IX	
 	DJNZ LB500	
@@ -1678,13 +1687,13 @@ LB500	LD A,(DE)
 	ADD IX,DE	
 	EX DE,HL	
 	POP HL	
-	INC H		; next pixel row
+	INC H			; next pixel row
 	POP BC	
 	DJNZ LB4FB	
 	POP BC	
-	INC (IY+$03)	; increment row
-	LD A,(IY+$03)	; get row
-	CP $18		; < 24 ?
+	INC (IY+$03)		; increment row
+	LD A,(IY+$03)		; get row
+	CP $18			; < 24 ?
 	JR NC,LB53A	
 	DJNZ LB4D6	
 LB53A	POP IX	
@@ -1702,8 +1711,8 @@ LB547	LD H,(IX+$08)
 	PUSH HL	
 	POP DE	
 	INC HL	
-	LD B,(IY+$09)	; number of records to copy
-	CALL LB572	; Copy records forward, from HL to DE
+	LD B,(IY+$09)		; number of records to copy
+	CALL CopyRecordsFwd	; Copy records forward, from HL to DE
 	DEC DE	
 	XOR A	
 	LD (DE),A	
@@ -1719,15 +1728,16 @@ LB565	LD A,(IX+$03)
 ; I: HL = source address, DE = destination address
 ; I: IY = ??? (IY+$0A) is record size
 ; I: B = number of records to copy
-LB572	PUSH BC	
-	LD C,(IY+$0A)	; get record size
+CopyRecordsFwd
+	PUSH BC	
+	LD C,(IY+$0A)		; get record size
 	LD B,$00	
 	LDIR	
 	POP BC	
-	DJNZ LB572	
+	DJNZ CopyRecordsFwd	
 	RET	
 
-LB57E	LD E,(IY+$0A)	; get record size
+LB57E	LD E,(IY+$0A)		; get record size
 	LD D,$00	
 	LD B,(IY+$09)	
 LB586	ADD HL,DE	
@@ -1737,7 +1747,7 @@ LB586	ADD HL,DE
 	LD E,L	
 	DEC HL	
 	LD B,(IY+$09)	
-	CALL LB598	; Copy records backward, from HL to DE
+	CALL CopyRecordsBck	; Copy records backward, from HL to DE
 	INC DE	
 	XOR A	
 	LD (DE),A	
@@ -1747,31 +1757,32 @@ LB586	ADD HL,DE
 ; I: HL = source address, DE = destination address
 ; I: IY = ??? (IY+$0A) is record size
 ; I: B = number of records to copy
-LB598	PUSH BC	
-	LD C,(IY+$0A)	; get record size
+CopyRecordsBck
+	PUSH BC	
+	LD C,(IY+$0A)		; get record size
 	LD B,$00	
 	LDDR	
 	POP BC	
-	DJNZ LB598	
+	DJNZ CopyRecordsBck	
 	RET
 
 ; I: HL = ???
 LB5A4	BIT 7,(IX+$12)	
 	JR NZ,LB5C1	
 	PUSH HL	
-	LD E,(IY+$0A)	; get record size
+	LD E,(IY+$0A)		; get record size
 	LD D,$00	
 	ADD HL,DE	
 	POP DE	
 	LD B,(IY+$08)	
-	CALL LB572	; Copy records forward, from HL to DE
-	LD B,(IY+$0A)	; get record size
+	CALL CopyRecordsFwd	; Copy records forward, from HL to DE
+	LD B,(IY+$0A)		; get record size
 	XOR A	
 LB5BC	LD (DE),A	
 	INC DE	
 	DJNZ LB5BC	
 	RET	
-LB5C1	LD E,(IY+$0A)	; get record size
+LB5C1	LD E,(IY+$0A)		; get record size
 	LD D,$00	
 	LD B,(IY+$08)	
 LB5C9	ADD HL,DE	
@@ -1782,37 +1793,37 @@ LB5C9	ADD HL,DE
 	POP DE	
 	EX DE,HL	
 	LD B,(IY+$08)	
-	CALL LB598	; Copy records backward, from HL to DE
-	LD B,(IY+$0A)	; get record size
+	CALL CopyRecordsBck	; Copy records backward, from HL to DE
+	LD B,(IY+$0A)		; get record size
 	XOR A	
-LB5DB	LD (DE),A	; clear the record
+LB5DB	LD (DE),A		; clear the record
 	DEC DE	
 	DJNZ LB5DB	
 	RET	
 
-; I: IX = object record address
-; I: IY = ???
+; I: IX = object record address; $C4F0 $C505 $C51A $C52F $C544 $C559 $C56E $C583 $C598 $C5AD  $C78F  $C8C7
+; I: IY = ???; $C092 $C0A2 $C0B2 $C0EA $C102 $C11A $C132 $C14A $C182
 LB5E0	RES 1,(IX+$0D)	
 	BIT 0,(IX+$0D)	
 	JR Z,LB5EE	
 	SET 1,(IX+$0D)	
 LB5EE	RES 0,(IX+$0D)	
-	LD HL,(L5B0B)	; get screen position on 256x256 map
-	LD A,(IX+$00)	; get column 0..255
+	LD HL,(L5B0B)		; get screen position on 256x256 map
+	LD A,(IX+$00)		; get column 0..255
 	SUB L	
 	LD C,A	
-	CP $18		; < 24 ?
+	CP $18			; < 24 ?
 	JR C,LB60A	
 	ADD A,(IY+$06)	
-	CP $18		; < 24 ?
+	CP $18			; < 24 ?
 	LD A,C	
 	JR C,LB60A	
 	SET 0,(IX+$0D)	
 LB60A	LD (IY+$02),A	
 	LD (IY+$00),A	
-	LD A,(IX+$01)	; get row 0..255
+	LD A,(IX+$01)		; get row 0..255
 	SUB H	
-	CP $18		; < 24 ?
+	CP $18			; < 24 ?
 	LD C,A	
 	JR C,LB62D	
 	ADD A,(IY+$08)	
@@ -1826,7 +1837,7 @@ LB60A	LD (IY+$02),A
 LB62D	LD (IY+$03),A	
 	LD (IY+$01),A	
 	LD A,(IX+$0D)	
-	XOR $01		; inverse bit 0
+	XOR $01			; inverse bit 0
 	LD (IX+$0D),A	
 	BIT 0,A	
 	JR Z,LB65F	
@@ -1842,7 +1853,7 @@ LB646	BIT 7,(HL)
 	JR Z,LB646	
 	SET 7,(IX+$0D)	
 	RET	
-LB655	AND $0F		; 0..15
+LB655	AND $0F			; 0..15
 	OR $F0	
 	LD (IX+$08),A	
 	SET 7,(HL)	
@@ -1852,7 +1863,7 @@ LB65F	BIT 1,A
 	BIT 7,(IX+$0D)	
 	RET NZ	
 	LD A,(IX+$08)	
-	AND $0F		; 0..15
+	AND $0F			; 0..15
 	LD HL,LB676	
 	LD E,A	
 	LD D,$00	
@@ -1862,104 +1873,104 @@ LB65F	BIT 1,A
 
 LB676	DEFS $10
 
-; I: IX = object record address
-; I: IY = ???
+; I: IX = object record address; $C4F0 $C62B $C640 $C655 $C66A $C775 $C7A9 $C7C3 $C7DD $C7F7 $C811 $C82B $C845
+; I: IY = ???; $C0A2 $C0B2 $C0EA $C102 $C11A $C132 $C14A $C182
 LB686	BIT 5,(IX+$0D)	
 	JR Z,LB6D6	
-	LD L,(IY+$00)	; get column
-	LD H,(IY+$01)	; get row
+	LD L,(IY+$00)		; get column
+	LD H,(IY+$01)		; get row
 	LD A,$06	
 	XOR (IX+$04)	
 	LD C,A	
 	BIT 7,(IX+$11)	
 	JR NZ,LB6A6	
-	INC (IX+$00)	; one column right
+	INC (IX+$00)		; one column right
 	INC (IY+$00)	
 	JR LB6B1	
-LB6A6	DEC (IX+$00)	; one column left
+LB6A6	DEC (IX+$00)		; one column left
 	DEC (IY+$00)	
 	LD A,L	
-	ADD A,(IY+$06)	; add DX ??
+	ADD A,(IY+$06)		; add DX ??
 	LD L,A	
-LB6B1	LD B,(IY+$09)	; get object height - loop counter
+LB6B1	LD B,(IY+$09)		; get object height - loop counter
 LB6B4	LD A,H	
-	AND $E0		; check for 0..31 range
-	JR NZ,LB6D3	; out of range => skip
+	AND $E0			; check for 0..31 range
+	JR NZ,LB6D3		; out of range => skip
 	LD A,H	
-	CP $18		; row < 24 ?
-	JR NC,LB6D3	; no => skip
+	CP $18			; row < 24 ?
+	JR NC,LB6D3		; no => skip
 	LD A,L	
-	AND $E0		; check for 0..31 range
-	JR NZ,LB6D3	; out of range => skip
+	AND $E0			; check for 0..31 range
+	JR NZ,LB6D3		; out of range => skip
 	LD A,L	
-	CP $18		; column < 24 ?
-	JR NC,LB6D3	; no => skip
+	CP $18			; column < 24 ?
+	JR NC,LB6D3		; no => skip
 	PUSH HL	
-	CALL LA14C	; Get screen attribute address
+	CALL GetScrAttrAddr	; Get screen attribute address
 	LD A,C	
-	CP (HL)		; same color?
-	JR NZ,LB6D2	; no => skip
+	CP (HL)			; same color?
+	JR NZ,LB6D2		; no => skip
 	LD (HL),$06	
 LB6D2	POP HL	
-LB6D3	INC H		; next row
+LB6D3	INC H			; next row
 	DJNZ LB6B4	
 LB6D6	BIT 6,(IX+$0D)	
 	JR Z,LB704	
-	LD L,(IY+$00)	; get column
-	LD H,(IY+$01)	; get row
+	LD L,(IY+$00)		; get column
+	LD H,(IY+$01)		; get row
 	LD A,$06	
 	XOR (IX+$04)	
 	LD C,A	
 	BIT 7,(IX+$12)	
 	JR NZ,LB6F6	
-	INC (IY+$01)	; one row down
+	INC (IY+$01)		; one row down
 	INC (IX+$01)	
 	JR LB701	
-LB6F6	DEC (IY+$01)	; one row up
+LB6F6	DEC (IY+$01)		; one row up
 	DEC (IX+$01)	
 	LD A,H	
 	ADD A,(IY+$08)	
 	LD H,A	
-LB701	CALL LB70F	; Screen attribute change for horizontally oriented object
-LB704	LD L,(IY+$00)	; get column
-	LD H,(IY+$01)	; get row
+LB701	CALL LB70F		; Screen attribute change for horizontally oriented object
+LB704	LD L,(IY+$00)		; get column
+	LD H,(IY+$01)		; get row
 	LD C,$06	
 	JP LB875	
 
 ; Screen attribute change for horizontally oriented object
-; I: IX = object record address
-; I: IY = ???
+; I: IX = object record address; $C4F0 $C598 $C655 $C7A9 $C7F7 $C811 $C82B $C845 $C85F $C893 $C8AD
+; I: IY = ???; $C092 $C0A2 $C0B2 $C0EA $C102 $C11A $C132
 ; I: HL = (row, column)
-LB70F	LD A,H		; row
-	AND $E0		; check for 0..31 range
-	RET NZ		; return if out of range
-	LD A,H		; row
-	CP $18		; < 24 ?
-	RET NC		; return if >= 24
+LB70F	LD A,H			; row
+	AND $E0			; check for 0..31 range
+	RET NZ			; return if out of range
+	LD A,H			; row
+	CP $18			; < 24 ?
+	RET NC			; return if >= 24
 	PUSH HL	
-	LD B,(IY+$07)	; object width as loop counter
-LB71B	LD A,L		; column
-	AND $E0		; check for 0..31 range
-	JR NZ,LB732	; return if out of range
-	LD A,L		; column
-	CP $18		; < 24 ?
-	JR NC,LB732	; return if >= 24
+	LD B,(IY+$07)		; object width as loop counter
+LB71B	LD A,L			; column
+	AND $E0			; check for 0..31 range
+	JR NZ,LB732		; return if out of range
+	LD A,L			; column
+	CP $18			; < 24 ?
+	JR NC,LB732		; return if >= 24
 	PUSH HL	
-	CALL LA14C	; Get screen attribute address
-	LD A,(HL)	; get color from the screen
-	CP C		; same color?
-	JR NZ,LB731	; skip if not
-	XOR (IX+$04)	; change color
-	LD (HL),A	; write color to the screen
+	CALL GetScrAttrAddr	; Get screen attribute address
+	LD A,(HL)		; get color from the screen
+	CP C			; same color?
+	JR NZ,LB731		; skip if not
+	XOR (IX+$04)		; change color
+	LD (HL),A		; write color to the screen
 LB731	POP HL	
-LB732	INC L		; next column
+LB732	INC L			; next column
 	DJNZ LB71B	
 	POP HL	
 	RET
 
-; I: IX = object record address (see LC4F0)
+; I: IX = record address in block LC4F0; $C4F0 $C52F $C601 $C62B $C640 $C712 $C727 $C85F
 LB737	LD D,(IX+$14)	
-	LD E,(IX+$13)	
+	LD E,(IX+$13)		; now DE = object record address in block LC092
 	PUSH DE	
 	POP IY	
 	LD A,(IX+$0E)	
@@ -1968,11 +1979,11 @@ LB737	LD D,(IX+$14)
 	RES 6,(IX+$0D)	
 	LD A,(IX+$02)	
 	ADD A,(IX+$11)	
-	AND $07		; 0..7
+	AND $07			; 0..7
 	LD (IX+$02),A	
 	LD A,(IX+$03)	
 	ADD A,(IX+$12)	
-	AND $07		; 0..7
+	AND $07			; 0..7
 	LD (IX+$03),A	
 	CALL LB5E0	
 	BIT 0,(IX+$0D)	
@@ -2002,7 +2013,7 @@ LB79E	LD A,(IX+$02)
 	LD A,(IX+$03)	
 LB7AA	CP $04	
 	RET NZ	
-	LD HL,LB7B8	; address of the return point - put on the stack
+	LD HL,LB7B8		; address of the return point - put on the stack
 	PUSH HL
 	LD H,(IX+$06)	
 	LD L,(IX+$05)	
@@ -2012,20 +2023,21 @@ LB7B8	RET
 
 LB7B9	DEFS $02
 
+; I: IX = object address in block LC4F0; $C505 $C893 $C8E1
 LB7BB	LD A,(IX+$0D)	
 	AND $9E	
 	LD (IX+$0D),A	
 	LD E,(IX+$13)	
-	LD D,(IX+$14)	
+	LD D,(IX+$14)		; get record address in block LC092
 	PUSH DE	
 	POP IY	
 	LD A,(IX+$02)	
 	ADD A,(IX+$11)	
-	AND $07		; 0..7
+	AND $07			; 0..7
 	LD (IX+$02),A	
 	LD A,(IX+$03)	
 	ADD A,(IX+$12)	
-	AND $07		; 0..7
+	AND $07			; 0..7
 	LD (IX+$03),A	
 	CALL LB5E0	
 	BIT 0,(IX+$0D)	
@@ -2093,16 +2105,16 @@ LB871	DEC (IX+$01)
 ;
 LB875	LD A,(IY+$09)	
 	LD (IY+$0E),A	
-LB87B	CALL LB70F	; Screen attribute change for horizontally oriented object
-	INC H		; next row
+LB87B	CALL LB70F		; Screen attribute change for horizontally oriented object
+	INC H			; next row
 	DEC (IY+$0E)	
 	JR NZ,LB87B	
 	RET
 
-LB885	BIT 0,(IX+$10)	; check "moving" bit
+LB885	BIT 0,(IX+$10)		; check "moving" bit
 	JP NZ,LB941	
 	BIT 7,(IX+$11)	
-	LD A,(IX+$00)	; get column 0..255
+	LD A,(IX+$00)		; get column 0..255
 	JR NZ,LB89C	
 	INC A	
 	INC A	
@@ -2112,32 +2124,32 @@ LB89C	DEC A
 	DEC A	
 	DEC A	
 LB89F	LD L,A	
-	LD H,(IX+$01)	; get row 0..255
-	CALL LA129	; Calculate address in relief block and Get tile nummber
-	OR A		; empty tile?
+	LD H,(IX+$01)		; get row 0..255
+	CALL GetTileInBlock	; Calculate address in relief block and Get tile nummber
+	OR A			; empty tile?
 	JR NZ,LB903	
-	INC H		; down one row
-	CALL LA129	; Calculate address in relief block and Get tile nummber
-	OR A		; empty tile?
+	INC H			; down one row
+	CALL GetTileInBlock	; Calculate address in relief block and Get tile nummber
+	OR A			; empty tile?
 	JR NZ,LB903	
 	BIT 0,(IX+$0D)	
 	JR Z,LB8D7	
 	BIT 7,(IX+$0D)	
 	JR NZ,LB8D7	
-	LD DE,(L5B0B)	; get screen position on 256x256 map
-	LD A,H		; get screen row
-	SUB D		; now A = [row 0..255] - [screen row]
-	CP $18		; result within 0..23 ?
+	LD DE,(L5B0B)		; get screen position on 256x256 map
+	LD A,H			; get screen row
+	SUB D			; now A = [row 0..255] - [screen row]
+	CP $18			; result within 0..23 ?
 	JR NC,LB8D7	
-	LD D,A		; now D = row 0..23
-	LD A,L		; get screen column
-	SUB E		; now A = [column 0..255] - [screen column]
-	CP $18		; result within 0..23 ?
+	LD D,A			; now D = row 0..23
+	LD A,L			; get screen column
+	SUB E			; now A = [column 0..255] - [screen column]
+	CP $18			; result within 0..23 ?
 	JR NC,LB8D7	
 	LD L,A	
-	LD H,D		; now HL = row/column on the screen
-	CALL LA14C	; Get screen attribute address
-	LD A,(HL)	; get attribute value
+	LD H,D			; now HL = row/column on the screen
+	CALL GetScrAttrAddr	; Get screen attribute address
+	LD A,(HL)		; get attribute value
 	CP $06	
 	JR NZ,LB903	
 LB8D7	LD A,R	
@@ -2175,7 +2187,7 @@ LB924	LD (IX+$0B),L
 	LD (IX+$0C),H	
 	LD (IX+$11),$00	
 	LD (IX+$12),$00	
-	SET 0,(IX+$10)	; set "moving" bit
+	SET 0,(IX+$10)		; set "moving" bit
 	LD A,(IY+$0C)	
 	LD (IX+$19),A	
 	SLA (IX+$0E)	
@@ -2191,18 +2203,18 @@ LB941	DEC (IX+$19)
 	JR LB95D	
 LB957	LD L,(IY+$12)	
 	LD H,(IY+$13)	
-LB95D	LD (IX+$09),L	; set sprite address
+LB95D	LD (IX+$09),L		; set sprite address
 	LD (IX+$0A),H
-	LD (IX+$0B),L	; set sprite address
+	LD (IX+$0B),L		; set sprite address
 	LD (IX+$0C),H
-	RES 0,(IX+$10)	; clear "moving" bit
+	RES 0,(IX+$10)		; clear "moving" bit
 	SRL (IX+$0E)	
 	RET	
 
-LB972	BIT 0,(IX+$10)	; check "moving" bit
+LB972	BIT 0,(IX+$10)		; check "moving" bit
 	JP NZ,LBA33	
 	BIT 7,(IX+$12)	
-	LD A,(IX+$01)	; get row 0..255
+	LD A,(IX+$01)		; get row 0..255
 	JR NZ,LB988	
 	ADD A,(IY+$09)	
 	INC A	
@@ -2210,15 +2222,15 @@ LB972	BIT 0,(IX+$10)	; check "moving" bit
 LB988	DEC A	
 	DEC A	
 LB98A	LD H,A	
-	LD L,(IX+$00)	; get column 0..255
-	CALL LA129	; Calculate address in relief block and Get tile nummber
-	OR A		; empty tile?
+	LD L,(IX+$00)		; get column 0..255
+	CALL GetTileInBlock	; Calculate address in relief block and Get tile nummber
+	OR A			; empty tile?
 	JR NZ,LB9F9	
 	LD A,L	
 	ADD A,(IY+$06)	
 	LD L,A	
-	CALL LA129	; Calculate address in relief block and Get tile nummber
-	OR A		; empty tile?
+	CALL GetTileInBlock	; Calculate address in relief block and Get tile nummber
+	OR A			; empty tile?
 	JR NZ,LB9F9	
 	BIT 0,(IX+$0D)	
 	JR Z,LB9C7	
@@ -2237,8 +2249,8 @@ LB98A	LD H,A
 	JR NC,LB9C7	
 	LD L,A	
 	LD H,D	
-	CALL LA14C	; Get screen attribute address
-	LD A,(HL)	; get attribute value
+	CALL GetScrAttrAddr	; Get screen attribute address
+	LD A,(HL)		; get attribute value
 	CP $06	
 	JR NZ,LB9F9	
 LB9C7	LD A,R	
@@ -2256,14 +2268,14 @@ LB9D4	BIT 2,A
 	SUB $02	
 	LD L,A	
 LB9E3	INC L	
-	CALL LA129	; Calculate address in relief block and Get tile nummber
-	OR A		; empty tile?
+	CALL GetTileInBlock	; Calculate address in relief block and Get tile nummber
+	OR A			; empty tile?
 	JR NZ,LB9CF	
 	LD A,H	
 	ADD A,(IY+$08)	
 	LD H,A	
-	CALL LA129	; Calculate address in relief block and Get tile nummber
-	OR A		; empty tile?
+	CALL GetTileInBlock	; Calculate address in relief block and Get tile nummber
+	OR A			; empty tile?
 	JR NZ,LB9CF	
 	LD (IX+$11),C	
 	RET	
@@ -2283,7 +2295,7 @@ LBA14	LD (IX+$18),A
 	XOR A	
 	LD (IX+$11),A	
 	LD (IX+$12),A	
-	SET 0,(IX+$10)	; set "moving" bit
+	SET 0,(IX+$10)		; set "moving" bit
 	LD A,(IY+$0C)	
 	LD (IX+$19),A	
 	SLA (IX+$0E)	
@@ -2303,11 +2315,11 @@ LBA4F	LD (IX+$09),L
 	LD (IX+$0A),H	
 	LD (IX+$0B),L	
 	LD (IX+$0C),H	
-	RES 0,(IX+$10)	; clear "moving" bit
+	RES 0,(IX+$10)		; clear "moving" bit
 	SRL (IX+$0E)	
 	RET	
 
-LBA64	BIT 0,(IX+$10)	; check "moving" bit
+LBA64	BIT 0,(IX+$10)		; check "moving" bit
 	JP NZ,LBC8F	
 	SET 5,(IX+$10)	
 	BIT 2,(IX+$0D)	
@@ -2323,16 +2335,16 @@ LBA64	BIT 0,(IX+$10)	; check "moving" bit
 	LD E,(IY+$14)	
 	JR LBA96	
 LBA8F	DEC L	
-	LD D,(IY+$17)	; Get ??
+	LD D,(IY+$17)		; Get ??
 	LD E,(IY+$16)	
-LBA96	CALL LA129	; Calculate address in relief block and Get tile nummber
-	OR A		; empty tile?
+LBA96	CALL GetTileInBlock	; Calculate address in relief block and Get tile nummber
+	OR A			; empty tile?
 	JR NZ,LBADE	
 	LD A,H	
 	ADD A,(IY+$08)	
 	LD H,A	
-	CALL LA129	; Calculate address in relief block and Get tile nummber
-	OR A		; empty tile?
+	CALL GetTileInBlock	; Calculate address in relief block and Get tile nummber
+	OR A			; empty tile?
 	JR NZ,LBADE	
 	LD A,R	
 	JR Z,LBADE	
@@ -2340,9 +2352,9 @@ LBA96	CALL LA129	; Calculate address in relief block and Get tile nummber
 	JR NZ,LBAB4	
 LBAAF	LD (IX+$12),$00	
 	RET	
-LBAB4	LD H,(IX+$01)	; get row 0..255
-	LD L,(IX+$00)	; get column 0..255
-	DEC H		; one row up
+LBAB4	LD H,(IX+$01)		; get row 0..255
+	LD L,(IX+$00)		; get column 0..255
+	DEC H			; one row up
 	LD C,$FF	
 	BIT 2,A	
 	JR Z,LBAC9	
@@ -2350,25 +2362,25 @@ LBAB4	LD H,(IX+$01)	; get row 0..255
 	LD A,H	
 	ADD A,(IY+$09)	
 	LD H,A	
-	INC H		; one row down
-LBAC9	CALL LA129	; Calculate address in relief block and Get tile nummber
-	OR A		; empty tile?
+	INC H			; one row down
+LBAC9	CALL GetTileInBlock	; Calculate address in relief block and Get tile nummber
+	OR A			; empty tile?
 	JR NZ,LBAAF	
 	LD A,L	
 	ADD A,(IY+$06)	
 	LD L,A	
-	CALL LA129	; Calculate address in relief block and Get tile nummber
-	OR A		; empty tile?
+	CALL GetTileInBlock	; Calculate address in relief block and Get tile nummber
+	OR A			; empty tile?
 	JR NZ,LBAAF	
 	LD (IX+$12),C	
 	RET	
 LBADE	LD (IX+$0B),E	
 	LD (IX+$0C),D	
-	SET 0,(IX+$10)	; set "moving" bit
+	SET 0,(IX+$10)		; set "moving" bit
 	RES 7,(IX+$10)	
 	SLA (IX+$0E)	
-	LD L,(IX+$00)	; get column 0..255
-	LD H,(IX+$01)	; get row 0..255
+	LD L,(IX+$00)		; get column 0..255
+	LD H,(IX+$01)		; get row 0..255
 	BIT 7,(IX+$11)	
 	JR NZ,LBB04	
 	LD A,L	
@@ -2383,15 +2395,15 @@ LBB04	LD A,R
 	ADD A,(IY+$08)	
 	SUB (IY+$07)	
 	LD H,A	
-	CALL LA129	; Calculate address in relief block and Get tile nummber
-	OR A		; empty tile?
+	CALL GetTileInBlock	; Calculate address in relief block and Get tile nummber
+	OR A			; empty tile?
 	JR NZ,LBB32	
 	LD A,L	
 	LD C,L	
 	ADD A,(IY+$08)	
 	LD L,A	
-	CALL LA129	; Calculate address in relief block and Get tile nummber
-	OR A		; empty tile?
+	CALL GetTileInBlock	; Calculate address in relief block and Get tile nummber
+	OR A			; empty tile?
 	LD L,C	
 	JR NZ,LBB32	
 	SET 6,(IX+$10)	
@@ -2401,25 +2413,25 @@ LBB04	LD A,R
 	JR LBB5E	
 LBB32	LD A,R	
 	JR Z,LBB75	
-	LD A,(IX+$01)	; get row 0..255
+	LD A,(IX+$01)		; get row 0..255
 	CP $FA	
 	JR NC,LBB75	
 	ADD A,(IY+$07)	
 	LD H,A	
-	CALL LA129	; Calculate address in relief block and Get tile nummber
-	OR A		; empty tile?
+	CALL GetTileInBlock	; Calculate address in relief block and Get tile nummber
+	OR A			; empty tile?
 	JR NZ,LBB75	
 	LD C,L	
 	LD A,L	
 	ADD A,(IY+$08)	
 	LD L,A	
-	CALL LA129	; Calculate address in relief block and Get tile nummber
-	OR A		; empty tile?
+	CALL GetTileInBlock	; Calculate address in relief block and Get tile nummber
+	OR A			; empty tile?
 	LD L,C	
 	JR NZ,LBB75	
 	SET 6,(IX+$10)	
 	LD A,(IX+$17)	
-	LD H,(IX+$01)	; get row 0..255
+	LD H,(IX+$01)		; get row 0..255
 LBB5E	LD (IX+$18),A	
 	XOR A	
 	LD (IX+$12),A	
@@ -2431,8 +2443,8 @@ LBB5E	LD (IX+$18),A
 	RET	
 LBB75	RES 6,(IX+$10)	
 	RES 5,(IX+$10)	
-	LD H,(IX+$01)	; get row 0..255
-	LD L,(IX+$00)	; get column 0..255
+	LD H,(IX+$01)		; get row 0..255
+	LD L,(IX+$00)		; get column 0..255
 	BIT 7,(IX+$11)	
 	JR NZ,LBB8F	
 	XOR A	
@@ -2448,17 +2460,17 @@ LBB94	BIT 7,(IX+$12)
 	LD D,(IY+$17)	
 	LD E,(IY+$16)	
 	JR LBBAE	
-LBBA7	DEC H		; one row up
+LBBA7	DEC H			; one row up
 	LD D,(IY+$15)	
 	LD E,(IY+$14)	
-LBBAE	CALL LA129	; Calculate address in relief block and Get tile nummber
-	OR A		; empty tile?
+LBBAE	CALL GetTileInBlock	; Calculate address in relief block and Get tile nummber
+	OR A			; empty tile?
 	JR NZ,LBBF6	
 	LD A,L	
 	ADD A,(IY+$06)	
 	LD L,A	
-	CALL LA129	; Calculate address in relief block and Get tile nummber
-	OR A		; empty tile?
+	CALL GetTileInBlock	; Calculate address in relief block and Get tile nummber
+	OR A			; empty tile?
 	JR NZ,LBBF6	
 	LD A,R	
 	JR Z,LBBF6	
@@ -2466,9 +2478,9 @@ LBBAE	CALL LA129	; Calculate address in relief block and Get tile nummber
 	JR NZ,LBBCC	
 LBBC7	LD (IX+$11),$00	
 	RET	
-LBBCC	LD H,(IX+$01)	; get row 0..255
-	LD L,(IX+$00)	; get column 0..255
-	DEC L		; one column left
+LBBCC	LD H,(IX+$01)		; get row 0..255
+	LD L,(IX+$00)		; get column 0..255
+	DEC L			; one column left
 	LD C,$FF	
 	BIT 2,A	
 	JR Z,LBBE1	
@@ -2477,24 +2489,24 @@ LBBCC	LD H,(IX+$01)	; get row 0..255
 	ADD A,(IY+$07)	
 	INC A	
 	LD L,A	
-LBBE1	CALL LA129	; Calculate address in relief block and Get tile nummber
-	OR A		; empty tile?
+LBBE1	CALL GetTileInBlock	; Calculate address in relief block and Get tile nummber
+	OR A			; empty tile?
 	JR NZ,LBBC7	
 	LD A,H	
 	ADD A,(IY+$08)	
 	LD H,A	
-	CALL LA129	; Calculate address in relief block and Get tile nummber
-	OR A		; empty tile?
+	CALL GetTileInBlock	; Calculate address in relief block and Get tile nummber
+	OR A			; empty tile?
 	JR NZ,LBBC7	
 	LD (IX+$11),C	
 	RET	
 LBBF6	LD (IX+$0B),E	
 	LD (IX+$0C),D	
-	SET 0,(IX+$10)	; set "moving" bit
+	SET 0,(IX+$10)		; set "moving" bit
 	SET 7,(IX+$10)	
 	SLA (IX+$0E)	
-	LD L,(IX+$00)	; get row 0..255
-	LD H,(IX+$01)	; get column 0..255
+	LD L,(IX+$00)		; get row 0..255
+	LD H,(IX+$01)		; get column 0..255
 	BIT 7,(IX+$12)	
 	JR NZ,$BC1C	
 	LD A,H	
@@ -2507,15 +2519,15 @@ LBC1C	LD A,R
 	ADD A,(IY+$06)	
 	SUB (IY+$09)	
 	LD L,A	
-	CALL LA129	; Calculate address in relief block and Get tile nummber
-	OR A		; empty tile?
+	CALL GetTileInBlock	; Calculate address in relief block and Get tile nummber
+	OR A			; empty tile?
 	JR NZ,LBC47	
 	LD A,H	
 	LD C,H	
 	ADD A,(IY+$06)	
 	LD H,A	
-	CALL LA129	; Calculate address in relief block and Get tile nummber
-	OR A		; empty tile?
+	CALL GetTileInBlock	; Calculate address in relief block and Get tile nummber
+	OR A			; empty tile?
 	LD H,C	
 	JR NZ,LBC47	
 	RES 6,(IX+$10)	
@@ -2526,15 +2538,15 @@ LBC1C	LD A,R
 LBC47	LD A,(IX+$00)	
 	ADD A,(IY+$09)	
 	LD L,A	
-	CALL LA129	; Calculate address in relief block and Get tile nummber
-	OR A		; empty tile?
+	CALL GetTileInBlock	; Calculate address in relief block and Get tile nummber
+	OR A			; empty tile?
 	JR NZ,LBC6E	
 	LD C,H	
 	LD A,H	
 	ADD A,(IY+$06)	
 	LD H,A	
-	CALL LA129	; Calculate address in relief block and Get tile nummber
-	OR A		; empty tile?
+	CALL GetTileInBlock	; Calculate address in relief block and Get tile nummber
+	OR A			; empty tile?
 	LD H,C	
 	JR NZ,LBC6E	
 	RES 6,(IX+$10)	
@@ -2543,8 +2555,8 @@ LBC47	LD A,(IX+$00)
 	JP LBB5E	
 LBC6E	SET 6,(IX+$10)	
 	RES 5,(IX+$10)	
-	LD H,(IX+$01)	; get row 0..255
-	LD L,(IX+$00)	; get column 0..255
+	LD H,(IX+$01)		; get row 0..255
+	LD L,(IX+$00)		; get column 0..255
 	BIT 7,(IX+$12)	
 	JR NZ,LBC89	
 	XOR A	
@@ -2565,7 +2577,7 @@ LBC8F	BIT 1,(IX+$10)
 	CALL LB470	
 	CALL LB837	
 	LD A,(IX+$08)	
-	AND $0F		; 0..15
+	AND $0F			; 0..15
 	LD E,A	
 	LD D,$00	
 	LD HL,LB676	
@@ -2584,12 +2596,12 @@ LBCC1	BIT 5,(IX+$10)
 	LD H,(IY+$05)	
 	PUSH HL	
 	POP IY	
-	LD (IX+$13),L	; set X value
-	LD (IX+$14),H	; set Y value
+	LD (IX+$13),L		; set X value
+	LD (IX+$14),H		; set Y value
 LBCEA	LD A,(IX+$1A)	
-	LD (IX+$00),A	; set column
+	LD (IX+$00),A		; set column
 	LD A,(IX+$1B)	
-	LD (IX+$01),A	; set row
+	LD (IX+$01),A		; set row
 	BIT 6,(IX+$10)	
 	JR Z,LBD04	
 	BIT 7,(IX+$18)	
@@ -2628,7 +2640,7 @@ LBD4E	DEC (IX+$19)
 	LD (IX+$0C),A	
 	LD A,(IX+$09)	
 	LD (IX+$0B),A	
-	RES 0,(IX+$10)	; clear "moving" bit
+	RES 0,(IX+$10)		; clear "moving" bit
 	RES 1,(IX+$10)	
 	LD A,(IX+$18)	
 	BIT 6,(IX+$10)	
@@ -2651,16 +2663,16 @@ LBD83	LD A,L
 	INC A	
 	LD (IX+$0F),A	
 	PUSH DE	
-	CALL NextRandom	; Random
+	CALL NextRandom		; Calculate next random value
 	LD A,H	
-	AND $07		; 0..7
-LBD9B	LD HL,LBDAA	; !!! mutable argument
+	AND $07			; 0..7
+LBD9B	LD HL,LBDAA		; !!! mutable argument
 	ADD A,L	
 	LD L,A	
 	JR NC,LBDA3	
 	INC H	
 LBDA3	LD A,(HL)	
-	LD (IX+$04),A	; set DX value
+	LD (IX+$04),A		; set DX value
 	POP DE	
 	RET	
 
@@ -2669,8 +2681,8 @@ LBDAA	DEFB $41,$44,$05,$45,$02,$42,$43,$40
 LBDB2	DEFB $05,$45,$02,$42,$43,$03,$40,$41
 
 LBDBA	CALL LBEC7	
-	LD A,(L5B03+1)	; get screen position (row) on mini-map
-	CP $03		; < 3 ?
+	LD A,(L5B03+1)		; get screen position (row) on mini-map
+	CP $03			; < 3 ?
 	JR NC,LBDCB	
 	CALL LBEB2	
 	CALL LBE58	
@@ -2692,7 +2704,7 @@ LBDE5	CALL LC45C
 
 LBDE9	DEFS $01
 
-LBDEA	LD A,(L5B03+1)	; get screen position (row) on mini-map
+LBDEA	LD A,(L5B03+1)		; get screen position (row) on mini-map
 	CP $03	
 	JR NC,LBDFE	
 	CALL LBE9A	
@@ -2730,71 +2742,71 @@ LBE36	CALL LC431
 	CALL LC4D5	
 	RET
 
-LBE40	LD A,(L5B16)	; get value 18 / 22 / 26 / 31, depending on Game level 1..4	
+LBE40	LD A,(L5B16)		; get value 18 / 22 / 26 / 31, depending on LEVEL	
 	LD B,A	
-	LD IX,(L5B1F)	
+	LD IX,(L5B1F)		; now IX = record address in block LC4F0
 LBE48	PUSH BC	
 	DEC (IX+$0F)	
 	CALL Z,LB737	
-	LD BC,$001A	
+	LD BC,$001A		; 26
 	ADD IX,BC	
 	POP BC	
 	DJNZ LBE48	
 	RET
 
-LBE58	LD A,(L5B16)	; get value 18 / 22 / 26 / 31, depending on Game level 1..4
+LBE58	LD A,(L5B16)		; get value 18 / 22 / 26 / 31, depending on LEVEL
 	LD B,A	
-	LD IX,(L5B1F)	
+	LD IX,(L5B1F)		; now IX = record address in block LC4F0
 LBE60	PUSH BC	
 	CALL LB7BB	
-	LD BC,$001A	
+	LD BC,$001A		; 26
 	ADD IX,BC	
 	POP BC	
 	DJNZ LBE60	
 	RET
 
-LBE6D	LD A,(L5B17)	; get value 26 / 34 / 42 / 50, depending on Game level 1..4	
+LBE6D	LD A,(L5B17)		; get value 26 / 34 / 42 / 50, depending on LEVEL	
 	LD B,A	
-	LD IX,(L5B21)	
+	LD IX,(L5B21)		; now IX = record address in block LC4F0
 LBE75	PUSH BC	
 	DEC (IX+$0F)	
 	CALL Z,LB737	
-	LD BC,$001A	
+	LD BC,$001A		; 26
 	ADD IX,BC	
 	POP BC	
 	DJNZ LBE75	
 	RET	
 
-LBE85	LD A,(L5B17)	; get value 26 / 34 / 42 / 50, depending on Game level 1..4
+LBE85	LD A,(L5B17)		; get value 26 / 34 / 42 / 50, depending on LEVEL
 	LD B,A	
 	LD IX,(L5B21)	
 LBE8D	PUSH BC	
 	CALL LB7BB	
-	LD BC,$001A	
+	LD BC,$001A		; 26
 	ADD IX,BC	
 	POP BC	
 	DJNZ LBE8D	
 	RET
 
-LBE9A	LD A,(L5B15)	; get value 27 / 35 / 43 / 51, depending on Game level 1..4	
-	LD B,A	
-	LD IX,LC4F0	; object record address
+LBE9A	LD A,(L5B15)		; get number of 21-byte records: 27 / 35 / 43 / 51, depending on LEVEL	
+	LD B,A			; loop count
+	LD IX,LC4F0		; record address
 LBEA2	PUSH BC	
 	DEC (IX+$0F)	
 	CALL Z,LB737	
-	LD BC,$0015	
-	ADD IX,BC	
+	LD BC,$0015		; 21 - record size
+	ADD IX,BC		; next record
 	POP BC	
 	DJNZ LBEA2	
 	RET
 
-LBEB2	LD A,(L5B15)	; get value 27 / 35 / 43 / 51, depending on Game level 1..4
-	LD B,A	
-	LD IX,LC4F0	; object record address
+LBEB2	LD A,(L5B15)		; get number of 21-byte records: 27 / 35 / 43 / 51, depending on LEVEL
+	LD B,A			; loop count
+	LD IX,LC4F0		; record address
 LBEBA	PUSH BC	
 	CALL LB7BB	
-	LD BC,$0015	
-	ADD IX,BC	
+	LD BC,$0015		; 21 - record size
+	ADD IX,BC		; next record
 	POP BC	
 	DJNZ LBEBA	
 	RET
@@ -2802,63 +2814,63 @@ LBEBA	PUSH BC
 LBEC7	LD HL,LB676	
 	LD (HL),$80	
 	INC HL	
-	LD B,$0F	; repeat 15 times
+	LD B,$0F		; repeat 15 times
 	XOR A	
 LBED0	LD (HL),A	
 	INC HL	
 	DJNZ LBED0	
-	LD HL,$F000	; ???
+	LD HL,$F000		; ???
 	LD (LB7B9),HL	
 	RET
 
 LBEDB	CALL LBEC7	
 	LD HL,LBDAA	
 	LD (LBD9B+1),HL	
-	LD HL,LC20A
-	LD DE,LC4F0	; object record address
-	LD BC,$0015
-	LDIR		; Copy 21 byte from $C20A to $C4F0
-	LD A,(L5B13)	
-	LD B,A	
+	LD HL,LC20A		; record template for Boat
+	LD DE,LC4F0		; record address 
+	LD BC,$0015		; 21
+	LDIR			; Copy 21 bytes from LC20A to LC4F0
+	LD A,(L5B13)		; get Number of Meduza objects
+	LD B,A			; loop counter
 LBEF3	PUSH BC	
-	LD HL,LC21F	
+	LD HL,LC21F		; record template for Meduza
 	PUSH DE	
 	POP IX	
-	LD BC,$0015	
-	LDIR	
+	LD BC,$0015		; 21 - record size
+	LDIR			; Copy 21 bytes
 	PUSH DE	
-	CALL NextRandom	; Random
+	CALL NextRandom		; Calculate next random value
 	POP DE	
-	LD (IX+$00),H	
+	LD (IX+$00),H		; set column 0..255
 	LD C,$3F	
 	CALL LBD83	
 	POP BC	
 	DJNZ LBEF3	
-	LD A,(L5B14)	
-	LD B,A	
+	LD A,(L5B14)		; get Number of Round fishes	
+	LD B,A			; loop counter
 	LD C,$00	
-	LD A,(RANDOM)	; get current Random lo byte
+	LD A,(RANDOM)		; get current Random lo byte
 	BIT 5,A	
 	JR Z,LBF1D	
 	INC C	
 LBF1D	PUSH BC	
-	LD HL,LC234	
+	LD HL,LC234		; record template for Round fish
 	PUSH DE	
 	POP IX	
-	LD BC,$0015	
-	LDIR	
+	LD BC,$0015		; 21 - record size
+	LDIR			; Copy template to record
 	PUSH DE	
-	CALL NextRandom	; Random
+	CALL NextRandom		; Calculate next random value
 	POP DE	
 	LD (IX+$00),H	
 	LD A,L	
-	AND $03		; 0..3
+	AND $03			; 0..3
 	ADD A,(IX+$01)	
 	LD (IX+$01),A	
 	LD A,L	
 	SRL A	
 	SRL A	
-	AND $07		; 0..7
+	AND $07			; 0..7
 	JR NZ,LBF44	
 	INC A	
 LBF44	LD (IX+$03),A	
@@ -2871,74 +2883,75 @@ LBF44	LD (IX+$03),A
 	LD (IX+$0B),$85	
 	LD (IX+$11),$FE	
 LBF5D	DJNZ LBF1D	
-	LD (L5B1F),DE	
-	LD A,(L5B16)	; get value 18 / 22 / 26 / 31, depending on Game level 1..4
+	LD (L5B1F),DE		; save address for 26-byte records
+	LD A,(L5B16)		; get number of records: 18 / 22 / 26 / 31, depending on LEVEL
 	LD HL,$0F1B	
-	LD IY,LC2EB	
+	LD IY,LC2EB		; table address with record templates
 	CALL LBFB0	
-	LD (L5B21),DE	
-	LD A,(L5B17)	; get value 26 / 34 / 42 / 50, depending on Game level 1..4	
+	LD (L5B21),DE		; save address for 26-byte records
+	LD A,(L5B17)		; get number of records: 26 / 34 / 42 / 50, depending on LEVEL	
 	LD HL,$2A3B	
-	LD IY,LC331	
+	LD IY,LC331		; table address with record templates
 	CALL LBFB0	
-	LD (L5B23),DE	
+	LD (L5B23),DE		; save address for 26-byte records
 	LD IY,LBFA0	
-	LD A,(L5B18)	; get value 5 / 10 / 15 / 20, depending on Game level 1..4
+	LD A,(L5B18)		; get number of records: 5 / 10 / 15 / 20, depending on LEVEL
 	LD HL,LBDB2	
 	LD (LBD9B+1),HL	
 	CALL LC009	
 	LD IY,LBFA8	
-	LD A,(L5B19)	; get value 12 / 27 / 42 / 57, depending on Game level 1..4
+	LD A,(L5B19)		; get number of records: 12 / 27 / 42 / 57, depending on LEVEL
 	CALL LC009	
-	RET
+LBF9F	RET
 
 LBFA0	DEFB $05,$00,$AD,$C3,$1A,$00,$00,$0F
 LBFA8	DEFB $10,$11,$29,$C4,$1C,$00,$00,$0F
 
 ; I: IX = ???
-; I: IY = ???
+; I: IY = address of table with 8 record template addresses: LC2EB or LC331
 ; I: HL = ???
-; I: A = ??? loop counter
+; I: A = number of records, loop counter
+; O: DE = address ??
 LBFB0	LD (LBFC3+1),IY	
 	LD (LC007),HL	
 	LD B,A	
 LBFB8	PUSH BC	
 	PUSH DE	
-	CALL NextRandom	; Random
+	CALL NextRandom		; Calculate next random value
 	LD A,H	
-	AND $0E	
+	AND $0E			; 0 / 2 / 4 / 6 / 8 / 10 / 12 / 14
 	LD E,A	
 	LD D,$00	
-LBFC3	LD HL,$0000	; !!! mutable argument
+LBFC3	LD HL,$0000		; table address !!! mutable argument
 	ADD HL,DE	
 	LD C,(HL)	
 	INC HL	
-	LD B,(HL)	
+	LD B,(HL)		; now BC = record template address
 	LD L,C	
 	LD H,B	
-	LD BC,$001A	; 26	
+	LD BC,$001A		; 26 - record size
 	POP DE	
 	PUSH DE	
 	POP IX	
-	LDIR	
-	LD HL,($C007)	
+	LDIR			; copy template to record
+	LD HL,($C007)		; restore saved HL
 	LD (IX+$16),H	
 	LD (IX+$15),L	
-	LD A,(RANDOM)	; get current Random lo byte
-	AND $7F		; 0..127
-	ADD A,$40	; 64..191
-	LD (IX+$00),A	
-	LD A,(RANDOM+1)	; get current Random hi byte
+	LD A,(RANDOM)		; get current Random lo byte
+	AND $7F			; 0..127
+	ADD A,$40		; 64..191
+	LD (IX+$00),A		; set colummn
+	LD A,(RANDOM+1)		; get current Random hi byte
 	SRL A	
 	SRL A	
 	SRL A	
-	AND $0F		; 0..15
+	AND $0F			; 0..15
 	LD H,A	
 	LD A,L	
 	SUB H	
-	LD (IX+$01),A	
+	LD (IX+$01),A		; set row
 	PUSH DE	
-	CALL NextRandom	; Random
+	CALL NextRandom		; Calculate next random value
 	POP DE	
 	LD C,$0F	
 	CALL LBD83	
@@ -2946,8 +2959,10 @@ LBFC3	LD HL,$0000	; !!! mutable argument
 	DJNZ LBFB8	
 	RET
 
-LC007	DEFW $0000
+LC007	DEFW $0000		; temp storage for HL
 
+; I: IY ???
+; I: A = number of records
 LC009	LD B,A	
 	LD (IY+$05),E	
 	LD (IY+$06),D	
@@ -2975,7 +2990,7 @@ LC037	JR LC016
 LC039	PUSH BC	
 	PUSH HL	
 	PUSH DE	
-	CALL NextRandom	; Random
+	CALL NextRandom		; Calculate next random value
 	LD D,(IY+$03)	
 	LD E,(IY+$02)	
 	LD A,L	
@@ -2986,7 +3001,7 @@ LC039	PUSH BC
 	POP BC	
 	JR LC021	
 LC04F	LD A,H	
-	AND $06		; 0 / 2 / 4 / 6
+	AND $06			; 0 / 2 / 4 / 6
 	LD L,A	
 	LD H,$00	
 	ADD HL,DE	
@@ -3010,7 +3025,7 @@ LC04F	LD A,H
 	LD A,E	
 	ADD A,$04	
 	LD (IX+$00),A	
-	LD A,(RANDOM+1)	; get current Random hi byte
+	LD A,(RANDOM+1)		; get current Random hi byte
 	LD L,A	
 	LD C,(IY+$07)	
 	CALL LBD83	
@@ -3021,128 +3036,235 @@ LC04F	LD A,H
 	LD D,(IY+$06)	
 	RET	
 
-LC092	DEFW $0000,$0000,$0000,$0807	
-	DEFW $0403,$1840,$C080,$0000	
-	DEFW $0000,$0000,$0000,$0201	
-	DEFW $0302,$1010,$2030,$0000	
-	DEFW $0000,$0000,$C0CE,$0302	
-	DEFW $0201,$0818,$1803,$0000	
-	DEFW $8285,$8254,$82B6,$82E6	
-	DEFW $82C6,$82F6,$0000,$0000	
-	DEFW $C0B2,$0201,$0302,$1010	
-	DEFW $2003,$0000,$8347,$8316	
-	DEFW $8378,$83A8,$8388,$83B8	
-	DEFW $0000,$0000,$0000,$0706	
-	DEFW $0302,$1038,$7005,$0000	
-	DEFW $64E5,$6364,$6666,$6846	
-	DEFW $0000,$0000,$0000,$0807	
-	DEFW $0403,$1840,$C006,$0000	
-	DEFW $70B7,$6A26,$6CC7,$7358	
-	DEFW $0000,$0000,$0000,$0504	
-	DEFW $0201,$0828,$2804,$0000	
-	DEFW $7BCE,$7C4F,$7D50,$7CD0	
-	DEFW $0000,$0000,$0000,$0403	
-	DEFW $0403,$1820,$6001,$0000	
-	DEFW $7748,$7869,$7942,$7821	
-	DEFW $0000,$0000,$C166,$0403	
-	DEFW $0201,$0820,$2005,$0000	
-	DEFW $60D9,$6000,$6061,$613A	
-	DEFW $6091,$616A,$0000,$0000	
-	DEFW $C14A,$0201,$0403,$1810	
-	DEFW $3005,$0000,$628B,$61B2	
-	DEFW $6213,$62EC,$6243,$631C	
-	DEFW $0000,$0000,$C19E,$0403	
-	DEFW $0201,$0820,$2003,$0000	
-	DEFW $7A1B,$798A,$79D3,$7A64	
-	DEFW $79EB,$7A7C,$0000,$0000	
-	DEFW $C182,$0201,$0403,$1810	
-	DEFW $3003,$0000,$7AF5,$7AAC	
-	DEFW $7B3E,$7B86,$7B56,$7B9E	
-	DEFW $0000,$0000,$C1D6,$0504	
-	DEFW $0201,$0828,$2805,$0000	
-	DEFW $7EF1,$7DD0,$7E51,$7F72	
-	DEFW $7E91,$7FB2,$0000,$0000	
-	DEFW $C1BA,$0201,$0504,$2010	
-	DEFW $4005,$0000,$8133,$8012	
-	DEFW $8093,$81B4,$80D3,$81F4	
-	DEFW $0000,$0000,$0000,$0807	
-	DEFW $0302,$1040,$8006,$0000	
-	DEFW $8839,$83D8,$8599,$89FA	
-LC20A	DEFB $F8,$06,$04,$01,$05,$81,$C4,$00,$00,$9A,$8C,$9A,$8C,$18,$28,$28,$01,$00,$00,$92,$C0	
-LC21F	DEFB $00,$07,$04,$05,$00,$9F,$BF,$00,$00,$43,$8D,$43,$8D,$18,$00,$00,$00,$01,$00,$A2,$C0	
-LC234	DEFB $00,$09,$04,$02,$00,$9F,$BF,$00,$00,$54,$82,$54,$82,$18,$00,$00,$00,$02,$00,$B2,$C0	
-	DEFB $00,$00,$04,$02,$00,$85,$B8,$00,$00,$64,$63,$64,$63,$18,$00,$00,$00,$02,$00,$EA,$C0	
-	DEFB $00,$00,$02,$00,$00,$00,$00,$00,$04,$02,$00,$85,$B8,$00,$00,$26,$6A,$26,$6A,$18,$00	
-	DEFB $00,$00,$02,$00,$02,$C1,$00,$00,$02,$00,$00,$00,$00,$00,$04,$02,$00,$85,$B8,$00,$00	
-	DEFB $00,$60,$00,$60,$18,$00,$00,$00,$02,$00,$4A,$C1,$00,$00,$02,$00,$00,$00,$00,$00,$04	
-	DEFB $02,$00,$85,$B8,$00,$00,$4F,$7C,$4F,$7C,$18,$00,$00,$00,$02,$00,$1A,$C1,$00,$00,$02	
-	DEFB $00,$00,$00,$00,$00,$04,$02,$00,$85,$B8,$00,$00,$69,$78,$69,$78,$18,$00,$00,$00,$02	
-	DEFB $00,$32,$C1,$00,$00,$02,$00,$00,$00,$00,$00,$04,$02,$00,$85,$B8,$00,$00,$8A,$79,$8A	
-	DEFB $79,$18,$00,$00,$00,$02,$00,$82,$C1,$00,$00,$02,$00,$00,$00	
-LC2EB	DEFB $49,$C2,$64,$C2,$7F,$C2,$9A,$C2	
-	DEFB $B5,$C2,$D0,$C2,$9A,$C2,$49,$C2	
-	DEFB $00,$00,$04,$02,$00,$85,$B8,$00	
-	DEFB $00,$D0,$7D,$D0,$7D,$18,$00,$00	
-	DEFB $00,$02,$00,$BA,$C1,$00,$00,$02	
-	DEFB $00,$00,$00,$00,$00,$04,$02,$00	
-	DEFB $85,$B8,$00,$00,$D8,$83,$D8,$83	
-	DEFB $18,$00,$00,$00,$02,$00,$F2,$C1	
-	DEFB $00,$00,$02,$00,$00,$00
-LC331	DEFB $49,$C2,$64,$C2,$7F,$C2,$9A,$C2	
-	DEFB $B5,$C2,$D0,$C2,$FB,$C2,$16,$C3	
-	DEFB $00,$00,$02,$04,$00,$72,$B9,$00	
-	DEFB $00,$47,$83,$47,$83,$1C,$00,$00	
-	DEFB $00,$00,$02,$CE,$C0,$00,$00,$02	
-	DEFB $00,$00,$00,$00,$00,$02,$04,$00	
-	DEFB $72,$B9,$00,$00,$8B,$62,$8B,$62	
-	DEFB $1C,$00,$00,$00,$00,$02,$66,$C1	
-	DEFB $00,$00,$02,$00,$00,$00,$00,$00	
-	DEFB $02,$04,$00,$72,$B9,$00,$00,$33	
-	DEFB $81,$33,$81,$1C,$00,$00,$00,$00	
-	DEFB $02,$D6,$C1,$00,$00,$02,$00,$00	
-	DEFB $00,$00,$00,$02,$04,$00,$72,$B9	
-	DEFB $00,$00,$F5,$7A,$F5,$7A,$1C,$00	
-	DEFB $00,$00,$00,$02,$9E,$C1,$00,$00	
-	DEFB $02,$00,$00,$00,$41,$C3,$5C,$C3	
-	DEFB $77,$C3,$92,$C3,$00,$00,$04,$02	
-	DEFB $00,$64,$BA,$00,$00,$54,$82,$54	
-	DEFB $82,$18,$00,$00,$00,$02,$00,$B2	
-	DEFB $C0,$03,$01,$02,$00,$00,$00,$00	
-	DEFB $00,$00,$00,$04,$02,$00,$64,$BA	
-	DEFB $00,$00,$00,$60,$00,$60,$18,$00	
-	DEFB $00,$00,$02,$00,$4A,$C1,$04,$02	
-	DEFB $02,$00,$00,$00,$00,$00,$00,$00	
-	DEFB $04,$02,$00,$64,$BA,$00,$00,$8A	
-	DEFB $79,$8A,$79,$18,$00,$00,$00,$02	
-	DEFB $00,$82,$C1,$03,$01,$02,$00,$00	
-	DEFB $00,$00,$00,$00,$00,$04,$02,$00	
-	DEFB $64,$BA,$00,$00,$D0,$7D,$D0,$7D	
-	DEFB $18,$00,$00,$00,$02,$00,$BA,$C1	
-	DEFB $04,$02,$02,$00,$00,$00,$00,$00	
-	DEFB $B5,$C3,$D2,$C3,$EF,$C3,$0C,$C4
+; Object records
+;	(IY+$00) - ??
+;	(IY+$01) - ??
+;	(IY+$02) - ??
+;	(IY+$03) - ??
+;	(IY+$06) - ??
+;	(IY+$07) - record width
+;	(IY+$08) - ??
+LC092	DEFW $0000,$0000,$0000,$0807,$0403,$1840,$C080,$0000	
+LC0A2	DEFW $0000,$0000,$0000,$0201,$0302,$1010,$2030,$0000	
+LC0B2	DEFW $0000,$0000,$C0CE,$0302,$0201,$0818,$1803,$0000,$8285,$8254,$82B6,$82E6,$82C6,$82F6	
+LC0CE	DEFW $0000,$0000,$C0B2,$0201,$0302,$1010,$2003,$0000,$8347,$8316,$8378,$83A8,$8388,$83B8	
+LC0EA	DEFW $0000,$0000,$0000,$0706,$0302,$1038,$7005,$0000,$64E5,$6364,$6666,$6846	
+LC102	DEFW $0000,$0000,$0000,$0807,$0403,$1840,$C006,$0000,$70B7,$6A26,$6CC7,$7358	
+LC11A	DEFW $0000,$0000,$0000,$0504,$0201,$0828,$2804,$0000,$7BCE,$7C4F,$7D50,$7CD0	
+LC132	DEFW $0000,$0000,$0000,$0403,$0403,$1820,$6001,$0000,$7748,$7869,$7942,$7821	
+LC14A	DEFW $0000,$0000,$C166,$0403,$0201,$0820,$2005,$0000,$60D9,$6000,$6061,$613A,$6091,$616A	
+LC166	DEFW $0000,$0000,$C14A,$0201,$0403,$1810,$3005,$0000,$628B,$61B2,$6213,$62EC,$6243,$631C	
+LC182	DEFW $0000,$0000,$C19E,$0403,$0201,$0820,$2003,$0000,$7A1B,$798A,$79D3,$7A64,$79EB,$7A7C	
+LC19E	DEFW $0000,$0000,$C182,$0201,$0403,$1810,$3003,$0000,$7AF5,$7AAC,$7B3E,$7B86,$7B56,$7B9E	
+LC1BA	DEFW $0000,$0000,$C1D6,$0504,$0201,$0828,$2805,$0000,$7EF1,$7DD0,$7E51,$7F72,$7E91,$7FB2	
+LC1D6	DEFW $0000,$0000,$C1BA,$0201,$0504,$2010,$4005,$0000,$8133,$8012,$8093,$81B4,$80D3,$81F4	
+LC1F2	DEFW $0000,$0000,$0000,$0807,$0302,$1040,$8006,$0000,$8839,$83D8,$8599,$89FA
 
-LC431	LD A,(L5B18)	; get value 5 / 10 / 15 / 20, depending on Game level 1..4
+; Record templates
+;
+; Record template for 21-byte record - Boat
+LC20A	DEFB $F8,$06,$04,$01,$05	
+	DEFW LC481	
+	DEFW $0000	
+	DEFW L8C9A,L8C9A	; Boat sprite
+	DEFB $18,$28,$28,$01,$00,$00	
+	DEFW LC092
+; Record template for 21-byte record - Meduza
+LC21F	DEFB $00,$07,$04,$05,$00	
+	DEFW LBF9F		; -> RET
+	DEFW $0000	
+	DEFW L8D43,L8D43	
+	DEFB $18,$00,$00,$00,$01,$00	
+	DEFW LC0A2
+; Record template for 21-byte record - Round fish
+LC234	DEFB $00,$09,$04,$02,$00	
+	DEFW LBF9F		; -> RET
+	DEFW $0000	
+	DEFW L8254,L8254	
+	DEFB $18,$00,$00,$00,$02,$00	
+	DEFW LC0B2
+; Record template for 26-byte record - Fish
+LC249	DEFB $00,$00,$04,$02,$00	
+	DEFW LB885	
+	DEFW $0000	
+	DEFW L6364,L6364	
+	DEFB $18,$00,$00,$00,$02,$00	
+	DEFW LC0EA	
+	DEFB $00,$00,$02,$00,$00,$00
+; Record template for 26-byte record - Shark
+LC264	DEFB $00,$00,$04,$02,$00	
+	DEFW LB885	
+	DEFW $0000	
+	DEFW L6A26,L6A26	
+	DEFB $18,$00,$00,$00,$02,$00	
+	DEFW LC102	
+	DEFB $00,$00,$02,$00,$00,$00
+; Record template for 26-byte record - Small squid horizontal
+LC27F	DEFB $00,$00,$04,$02,$00	
+	DEFW LB885	
+	DEFW $0000	
+	DEFW L6000,L6000	
+	DEFB $18,$00,$00,$00,$02,$00	
+	DEFW LC14A	
+	DEFB $00,$00,$02,$00,$00,$00
+; Record template for 26-byte record - Long fish
+LC29A	DEFB $00,$00,$04,$02,$00	
+	DEFW LB885	
+	DEFW $0000	
+	DEFW L7C4F,L7C4F	
+	DEFB $18,$00,$00,$00,$02,$00	
+	DEFW LC11A	
+	DEFB $00,$00,$02,$00,$00,$00
+; Record template for 26-byte record - Small fish cloud ??
+LC2B5	DEFB $00,$00,$04,$02,$00	
+	DEFW LB885	
+	DEFW $0000	
+	DEFW L7869,L7869	
+	DEFB $18,$00,$00,$00,$02,$00	
+	DEFW LC132	
+	DEFB $00,$00,$02,$00,$00,$00
+; Record template for 26-byte record - Small fish cloud ??
+LC2D0	DEFB $00,$00,$04,$02,$00	
+	DEFW LB885	
+	DEFW $0000	
+	DEFW L798A,L798A	
+	DEFB $18,$00,$00,$00,$02,$00	
+	DEFW LC182	
+	DEFB $00,$00,$02,$00,$00,$00
+; Table of 8 record templates
+LC2EB	DEFW LC249	
+	DEFW LC264	
+	DEFW LC27F	
+	DEFW LC29A	
+	DEFW LC2B5	
+	DEFW LC2D0	
+	DEFW LC29A	
+	DEFW LC249
+;
+; Record template for 26-byte record - Snake fish horizontal
+LC2FB	DEFB $00,$00,$04,$02,$00	
+	DEFW LB885	
+	DEFW $0000	
+	DEFW L7DD0,L7DD0	
+	DEFB $18,$00,$00,$00,$02,$00	
+	DEFW LC1BA	
+	DEFB $00,$00,$02,$00,$00,$00
+; Record template for 26-byte record - Squid
+LC316	DEFB $00,$00,$04,$02,$00	
+	DEFW LB885	
+	DEFW $0000	
+	DEFW L83D8,L83D8	
+	DEFB $18,$00,$00,$00,$02,$00	
+	DEFW LC1F2	
+	DEFB $00,$00,$02,$00,$00,$00
+; Table of 8 record templates
+LC331	DEFW LC249	
+	DEFW LC264	
+	DEFW LC27F	
+	DEFW LC29A	
+	DEFW LC2B5	
+	DEFW LC2D0	
+	DEFW LC2FB	
+	DEFW LC316
+;
+; Record template for 26-byte record - Round fish vertical
+LC341	DEFB $00,$00,$02,$04,$00	
+	DEFW LB972	
+	DEFW $0000	
+	DEFW L8347,L8347	
+	DEFB $1C,$00,$00,$00,$00,$02	
+	DEFW LC0CE	
+	DEFB $00,$00,$02,$00,$00,$00
+; Record template for 26-byte record - Small squid vertical
+LC35C	DEFB $00,$00,$02,$04,$00	
+	DEFW LB972	
+	DEFW $0000	
+	DEFW L628B,L628B	
+	DEFB $1C,$00,$00,$00,$00,$02	
+	DEFW LC166	
+	DEFB $00,$00,$02,$00,$00,$00
+; Record template for 26-byte record - Snake fish vertical
+LC377	DEFB $00,$00,$02,$04,$00	
+	DEFW LB972	
+	DEFW $0000	
+	DEFW L8133,L8133	
+	DEFB $1C,$00,$00,$00,$00,$02	
+	DEFW LC1D6	
+	DEFB $00,$00,$02,$00,$00,$00
+; Record template for 26-byte record - Small fish cloud ??
+LC392	DEFB $00,$00,$02,$04,$00	
+	DEFW LB972	
+	DEFW $0000	
+	DEFW L7AF5,L7AF5	
+	DEFB $1C,$00,$00,$00,$00,$02	
+	DEFW LC19E	
+	DEFB $00,$00,$02,$00,$00,$00
+; Table of 4 record templates
+LC3AD	DEFW LC341	
+	DEFW LC35C	
+	DEFW LC377	
+	DEFW LC392
+;
+; Record template for 28-byte record - Round fish
+LC3B5	DEFB $00,$00,$04,$02,$00	
+	DEFW LBA64	
+	DEFW $0000	
+	DEFW L8254,L8254	
+	DEFB $18,$00,$00,$00,$02,$00	
+	DEFW LC0B2	
+	DEFB $03,$01,$02,$00,$00,$00,$00,$00	
+; Record template for 28-byte record - Small squid horizontal
+LC3D2	DEFB $00,$00,$04,$02,$00	
+	DEFW LBA64	
+	DEFW $0000	
+	DEFW L6000,L6000	
+	DEFB $18,$00,$00,$00,$02,$00	
+	DEFW LC14A	
+	DEFB $04,$02,$02,$00,$00,$00,$00,$00
+; Record template for 28-byte record
+LC3EF	DEFB $00,$00,$04,$02,$00	
+	DEFW LBA64	
+	DEFW $0000	
+	DEFW L798A,L798A	
+	DEFB $18,$00,$00,$00,$02,$00	
+	DEFW LC182	
+	DEFB $03,$01,$02,$00,$00,$00,$00,$00	
+; Record template for 28-byte record - Snake fish horizontal
+LC40C	DEFB $00,$00,$04,$02,$00	
+	DEFW LBA64	
+	DEFW $0000	
+	DEFW L7DD0,L7DD0	
+	DEFB $18,$00,$00,$00,$02,$00	
+	DEFW LC1BA	
+	DEFB $04,$02,$02,$00,$00,$00,$00,$00	
+; Table of 4 record templates
+LC429	DEFW LC3B5	
+	DEFW LC3D2	
+	DEFW LC3EF	
+	DEFW LC40C
+
+LC431	LD A,(L5B18)		; get value 5 / 10 / 15 / 20, depending on LEVEL
 	LD B,A	
-	LD IX,(L5B23)	
+	LD IX,(L5B23)		; now IX = record address in block LC4F0
 LC439	PUSH BC	
 	DEC (IX+$0F)	
 	CALL Z,LB737	
-	LD BC,$001A	
+	LD BC,$001A		; 26
 	ADD IX,BC	
 	POP BC	
 	DJNZ LC439	
-	LD A,(L5B19)	; get value 12 / 27 / 42 / 57, depending on Game level 1..4
+	LD A,(L5B19)		; get value 12 / 27 / 42 / 57, depending on LEVEL
 	LD B,A	
 LC44C	PUSH BC	
 	DEC (IX+$0F)	
 	CALL Z,LB737	
-	LD BC,$001C	
+	LD BC,$001C		; 28
 	ADD IX,BC	
 	POP BC	
 	DJNZ LC44C	
 	RET
 
-LC45C	LD A,(L5B18)	; get value 5 / 10 / 15 / 20, depending on Game level 1..4
+LC45C	LD A,(L5B18)		; get value 5 / 10 / 15 / 20, depending on LEVEL
 	LD B,A	
 	LD IX,(L5B23)	
 LC464	PUSH BC	
@@ -3151,7 +3273,7 @@ LC464	PUSH BC
 	ADD IX,BC	
 	POP BC	
 	DJNZ LC464	
-	LD A,(L5B19)	; get value 12 / 27 / 42 / 57, depending on Game level 1..4
+	LD A,(L5B19)		; get value 12 / 27 / 42 / 57, depending on LEVEL
 	LD B,A	
 LC474	PUSH BC	
 	CALL LB7BB	
@@ -3200,7 +3322,7 @@ LC4BA	INC (IX+$0E)
 ; Delay ??
 LC4D5	OR A	
 	RET Z	
-LC4D7	LD BC,(L5B25)	; get value 150 / 100 / 50 / 1, depending on Game level
+LC4D7	LD BC,(L5B25)		; get value 150 / 100 / 50 / 1, depending on Game level
 	LD DE,$0000	
 	LD HL,$0000	
 	LDIR	
@@ -3211,10 +3333,34 @@ LC4D7	LD BC,(L5B25)	; get value 150 / 100 / 50 / 1, depending on Game level
 LC4E7	DEFB $FB,$02,$00,$2C,$42,$4C,$46,$49	
 	DEFB $4C
 
+; Object records:
+;  1. 21-byte records at LC4F0, count in L5B15: Boat, meduzas, round fishes
+;  2. 26-byte records at (L5B1F), count in L5B16
+;  3. 26-byte records at (L5B21), count in L5B17
+;  4. 26-byte records at (L5B23), count in L5B18
+;  5. 28-byte records, count in L5B19
+; Record format:
+; word	(IX+$00),(IX+$01) - column, row 0..255
+; byte	(IX+$02) - ?? 0..7
+; byte	(IX+$03) - ?? 0..7
+;	(IX+$04)
+;	(IX+$07),(IX+$08) - address ??
+; word	(IX+$09),(IX+$0A) - sprite address
+; word	(IX+$0B),(IX+$0C) - sprite address
+;	(IX+$0D) - bits 0,1
+;	(IX+$0E)
+;	(IX+$0F)
+;	(IX+$11)
+;	(IX+$12)
+; word	(IX+$13),(IX+$14) - record address in block LC092
 LC4F0	DEFB $2B,$31
 LC4F2	DEFB $30,$32,$33,$0D,$DC,$3C	
 	DEFB $47,$43,$32,$20,$4A,$52,$20,$47
-
-;LC500	DEFS $1400	
+;	DEFS 5
+;LC505
+;LC51A
+;LC52F
+;LC544
+;LC559
 
 ;----------------------------------------------------------------------------

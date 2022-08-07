@@ -35,41 +35,41 @@ Game	DI
 	PUSH IX	
 	PUSH IY	
 	LD HL,$0000	
-	LD (SCORE),HL	; reset Score value
-	LD (HELD),HL	; reset HELD value
-	LD A,$03	; Number of lives
-	LD (LIVES),A	; set the initial value
+	LD (SCORE),HL		; reset Score value
+	LD (HELD),HL		; reset HELD value
+	LD A,$03		; Number of lives
+	LD (LIVES),A		; set the initial value
 LD9A3	CALL PrepareMiniMap	; Prepare the world MiniMap table
-	CALL InitLevelVars	; Initialize variables depending of Game level
+	CALL InitLevelVars	; Initialize variables depending of LEVEL
 	CALL LBEDB	
 	LD HL,LE361	
 	LD (HL),$00	
-LD9B1	CALL LDAAD	; Prepare game screen and some variables
+LD9B1	CALL LDAAD		; Prepare game screen and some variables
 	CALL LE6AB	
-	LD HL,(L5B03)	; get Screen position on mini-map
+	LD HL,(L5B03)		; get Screen position on mini-map
 	CALL DrawGameScr	; Draw game screen
 	CALL LBDBA	
 LD9C0	CALL LB213	
 	CALL LBDEA	
 	CALL LE2A8	
-	LD IX,DiverObj	; Diver object address
+	LD IX,DiverObj		; Diver object address
 	BIT 4,(IX+$26)	
 	JR NZ,LD9DB	
 	BIT 5,(IX+$10)	
 	JR NZ,LD9F4	
 	JR LD9C0	
-LD9DB	LD A,(LIVES)	; get Number of lives
+LD9DB	LD A,(LIVES)		; get Number of lives
 	CP $04	
 	JR NZ,LD9E7	
 	LD A,$03	
-	LD (LIVES),A	; set Number of lives
-LD9E7	LD A,(LEVEL)	; Game level 1..4
+	LD (LIVES),A		; set Number of lives
+LD9E7	LD A,(LEVEL)		; LEVEL
 	CP $04	
 	JR Z,LD9EF	
-	INC A		; increase Game level
-LD9EF	LD (LEVEL),A	; Save game level 1..4
+	INC A			; increase Game level
+LD9EF	LD (LEVEL),A		; Save LEVEL
 	JR LD9A3	
-LD9F4	LD B,$00	; repeat 256 times
+LD9F4	LD B,$00		; repeat 256 times
 LD9F6	PUSH BC	
 	CALL LB213	
 	CALL LBDEA	
@@ -82,42 +82,42 @@ LD9F6	PUSH BC
 	LD A,(L5B0F)	
 	CP $03	
 	JR NZ,LDA1E	
-	LD A,(LIVES)	; get Number of lives
+	LD A,(LIVES)		; get Number of lives
 	CP $01	
-	JR Z,LDA1E	; No more lives? => no lives, jump
+	JR Z,LDA1E		; No more lives? => no lives, jump
 	DEC A	
-	LD (LIVES),A	; set Number of lives
+	LD (LIVES),A		; set Number of lives
 	JR LD9DB	
-LDA1E	LD A,(LIVES)	; get Number of lives
-	CP $01		; last live?
-	JR Z,LDA33	; yes => game over
-	DEC A		; One live less
-	LD (LIVES),A	; set Number of lives
+LDA1E	LD A,(LIVES)		; get Number of lives
+	CP $01			; last live?
+	JR Z,LDA33		; yes => game over
+	DEC A			; One live less
+	LD (LIVES),A		; set Number of lives
 	LD HL,LE361	
 	LD A,(HL)	
 	AND $20	
 	LD (HL),A	
 	JP LD9B1	
-LDA33	POP IY		; Ending the Game routine, the game is over
+LDA33	POP IY			; Ending the Game routine, the game is over
 	POP IX	
 	EI	
 	RET
 
 ; Clear screen, fill attributes with A
 ; I: A = screen attribute to use
-LDA39	LD (L5B4A),A	; store the attribute as current
-	LD HL,$4000	; screen pixels start address
-	LD BC,$1800	; nummber of bytes for screen pixels area
-LDA42	LD (HL),$00	; clear pixels
+LDA39	LD (L5B4A),A		; store the attribute as current
+	LD HL,$4000		; screen pixels start address
+	LD BC,$1800		; nummber of bytes for screen pixels area
+LDA42	LD (HL),$00		; clear pixels
 	INC HL	
 	DEC BC	
 	LD A,B	
 	OR C	
 	JR NZ,LDA42	
-	LD A,(L5B4A)	; get current screen attribute
+	LD A,(L5B4A)		; get current screen attribute
 	LD E,A	
-	LD BC,$0300	; number of bytes in screen attributes area
-LDA51	LD (HL),E	; set attribute
+	LD BC,$0300		; number of bytes in screen attributes area
+LDA51	LD (HL),E		; set attribute
 	INC HL	
 	DEC BC	
 	LD A,B	
@@ -141,7 +141,7 @@ LDA63	LD HL,($DC7E)
 ; I: A = character to print
 LDA6B	PUSH HL	
 	PUSH AF	
-	CALL LA164	; Convert char coords HL to ZX screen address
+	CALL GetScrAddr		; Convert char coords HL to ZX screen address
 	EX DE,HL	
 	POP AF	
 	LD L,A	
@@ -149,23 +149,23 @@ LDA6B	PUSH HL
 	RES 7,L	
 	ADD HL,HL	
 	ADD HL,HL	
-	ADD HL,HL	; *8
+	ADD HL,HL		; *8
 	BIT 7,A	
 	JR NZ,LDA83	
 	LD BC,ROM_CHARSET	; ROM font address, for chars $20..$7F
 	JR $DA86	
-LDA83	LD BC,LDC80	; Tiles 8x8 address, for chars $80..$AE
+LDA83	LD BC,LDC80		; Tiles 8x8 address, for chars $80..$AE
 LDA86	ADD HL,BC	
-	LD B,$08	; repeat 8 times
-LDA89	LD A,(HL)	; get char pixels
-	LD (DE),A	; put on the screen
+	LD B,$08		; repeat 8 times
+LDA89	LD A,(HL)		; get char pixels
+	LD (DE),A		; put on the screen
 	INC HL	
-	INC D		; next row
+	INC D			; next row
 	DJNZ LDA89	
-	POP HL		; restor char coords
-	CALL LA14C	; Get screen attribute address
-	LD A,(L5B4A)	; get current screen attribute
-	LD (HL),A	; set attribute on the screen
+	POP HL			; restor char coords
+	CALL GetScrAttrAddr	; Get screen attribute address
+	LD A,(L5B4A)		; get current screen attribute
+	LD (HL),A		; set attribute on the screen
 	RET	
 
 ; Print string
@@ -177,7 +177,7 @@ LDA98	LD (LDAA2+1),DE
 LDA9C	LD (LDC7E),BC	
 	LD A,(HL)	
 LDAA1	PUSH HL	
-LDAA2	CALL LDA59	; Print char and shift !!! mutable argument DA59 / DA63
+LDAA2	CALL LDA59		; Print char and shift !!! mutable argument DA59 / DA63
 	POP HL	
 	INC HL	
 	LD A,(HL)	
@@ -187,158 +187,158 @@ LDAA2	CALL LDA59	; Print char and shift !!! mutable argument DA59 / DA63
 
 ; Prepare game screen, indicators, and some variables
 LDAAD	LD A,$30	
-	CALL LDA39	; Clear screen with attribute A
+	CALL LDA39		; Clear screen with attribute A
 	LD A,$01	
 	OUT ($FE),A	
-	LD HL,LDC09	; Indicator top border
+	LD HL,LDC09		; Indicator top border
 	LD BC,$0018	
-	LD DE,LDA59	; Procedure Print char and shift right
-	CALL LDA98	; Print string
-	LD HL,LDC12	; Indicator bottom border
+	LD DE,LDA59		; Procedure Print char and shift right
+	CALL LDA98		; Print string
+	LD HL,LDC12		; Indicator bottom border
 	LD BC,$1718	
-	CALL LDA9C	; Print string
-	LD HL,LDC1B	; "HIGH"
+	CALL LDA9C		; Print string
+	LD HL,LDC1B		; "HIGH"
 	LD BC,$011A	
-	CALL LDA9C	; Print string
-	LD HL,LDC27	; "SCORE"
+	CALL LDA9C		; Print string
+	LD HL,LDC27		; "SCORE"
 	LD BC,$031A	
-	CALL LDA9C	; Print string
-	LD HL,LDC2D	; "HELD"
+	CALL LDA9C		; Print string
+	LD HL,LDC2D		; "HELD"
 	LD BC,$051A	
-	CALL LDA9C	; Print string
-	LD HL,LDC32	; Indicator left/right border
+	CALL LDA9C		; Print string
+	LD HL,LDC32		; Indicator left/right border
 	LD BC,$0118	
-	LD DE,LDA63	; Procedure Print char and shift down
-	CALL LDA98	; Print string
-	LD HL,LDC32	; Indicator left/right border
+	LD DE,LDA63		; Procedure Print char and shift down
+	CALL LDA98		; Print string
+	LD HL,LDC32		; Indicator left/right border
 	LD BC,$011F	
-	CALL LDA9C	; Print string
-	LD HL,LDC49	; "OXYGEN"
+	CALL LDA9C		; Print string
+	LD HL,LDC49		; "OXYGEN"
 	LD BC,$0C1A	
-	CALL LDA9C	; Print string
-	LD HL,LDC50	; "DEPTH"
+	CALL LDA9C		; Print string
+	LD HL,LDC50		; "DEPTH"
 	LD BC,$0C1C	
-	CALL LDA9C	; Print string
-	LD HL,LDC56	; "SKILL LIVES"
+	CALL LDA9C		; Print string
+	LD HL,LDC56		; "SKILL LIVES"
 	LD BC,$081E	
-	CALL LDA9C	; Print string
+	CALL LDA9C		; Print string
 	LD A,$38	
-	LD (L5B4A),A	; set current screen attribute
-	LD HL,LDC65	; Vertical gauge
+	LD (L5B4A),A		; set current screen attribute
+	LD HL,LDC65		; Vertical gauge
 	LD BC,$0719	
 	CALL LDA9C	
-	LD HL,LDC65	; Vertical gauge
+	LD HL,LDC65		; Vertical gauge
 	LD BC,$071B	
-	CALL LDA9C	; Print string
+	CALL LDA9C		; Print string
 	LD A,$0D	
-	LD (L5B4A),A	; set current screen attribute
-	LD HL,LDC76	; "1 2 3 4"
+	LD (L5B4A),A		; set current screen attribute
+	LD HL,LDC76		; "1 2 3 4"
 	LD BC,$071D	
-	CALL LDA9C	; Print string
-	LD HL,LDC76	; "1 2 3 4"
+	CALL LDA9C		; Print string
+	LD HL,LDC76		; "1 2 3 4"
 	LD BC,$101D	
-	CALL LDA9C	; Print string
-	LD HL,$58FB	; address of top of Depth indicator in attributes area
-	LD (LDE55),HL	; set Depth initial level
-	LD (HL),$28	; indicate initial Depth level
+	CALL LDA9C		; Print string
+	LD HL,$58FB		; address of top of Depth indicator in attributes area
+	LD (LDE55),HL		; set Depth initial level
+	LD (HL),$28		; indicate initial Depth level
 	DEC HL	
 	DEC HL	
-	LD (LDE57),HL	; set Oxygen initial level
-	LD (HL),$20	; indicate initial Oxygen level
-	LD A,(LEVEL)	; Game level 1..4
+	LD (LDE57),HL		; set Oxygen initial level
+	LD (HL),$20		; indicate initial Oxygen level
+	LD A,(LEVEL)		; LEVEL
 	DEC A	
 	RRCA	
 	RRCA	
 	LD E,A	
 	LD D,$00	
-	LD HL,$58FD	; base address in attributes area
+	LD HL,$58FD		; base address in attributes area
 	ADD HL,DE	
-	LD (HL),$4F	; indicate Game level
-	LD A,(LIVES)	; get Number of lives
+	LD (HL),$4F		; indicate Game level
+	LD A,(LIVES)		; get Number of lives
 	DEC A	
 	RRCA	
 	RRCA	
 	LD E,A	
 	LD D,$00	
-	LD HL,$5A1D	; base address in attributes area
+	LD HL,$5A1D		; base address in attributes area
 	ADD HL,DE	
 	LD (LDE59),HL	
-	LD (HL),$4F	; indicate nummber of lives
-	LD IX,DiverObj	; Diver object address
+	LD (HL),$4F		; indicate nummber of lives
+	LD IX,DiverObj		; Diver object address
 	CALL PrintHighScore	; Print high score number
-	CALL PrintScore	; Print score number
-	CALL PrintHeld	; Print HELD number
-	LD A,(LEVEL)	; Game level 1..4
+	CALL PrintScore		; Print score number
+	CALL PrintHeld		; Print HELD number
+	LD A,(LEVEL)		; LEVEL
 	DEC A	
 	ADD A,A	
 	ADD A,A	
 	ADD A,A	
-	ADD A,A		; A = (LEVEL - 1) * 16 => 0 / 16 / 32 / 48
+	ADD A,A			; A = (LEVEL - 1) * 16 => 0 / 16 / 32 / 48
 	LD E,A	
 	LD D,$00	
 	LD HL,LDDF0	
-	ADD HL,DE	; HL = $DDF0 + (LEVEL - 1) * 16
+	ADD HL,DE		; HL = $DDF0 + (LEVEL - 1) * 16
 	LD DE,L5B27	
 	LD BC,$000E	
-	LDIR		; copy 14 bytes = 7 words
-	LD A,(LEVEL)	; Game level 1..4
+	LDIR			; copy 14 bytes = 7 words
+	LD A,(LEVEL)		; LEVEL
 	LD C,A	
 	LD A,$05	
-	SUB C		; A = 5 - LEVEL => 4 / 3 / 2 / 1
+	SUB C			; A = 5 - LEVEL => 4 / 3 / 2 / 1
 	LD (IX+$1C),A	
 	LD (IX+$1E),A	
 	LD C,A	
 	LD A,$16	
-	SUB C		; A => 12 / 13 / 14 / 15
+	SUB C			; A => 12 / 13 / 14 / 15
 	LD (IX+$1D),A	
 	LD (IX+$1B),A	
-	LD A,(LEVEL)	; Game level 1..4
+	LD A,(LEVEL)		; LEVEL
 	ADD A,A	
 	LD C,A	
 	LD A,$0A	
-	SUB C		; A = 10 - LEVEL * 2
+	SUB C			; A = 10 - LEVEL * 2
 	ADD A,$02	
-	LD (L5B0E),A	; = 10 - LEVEL * 2 + 2 => 10 / 8 / 6 / 4
+	LD (L5B0E),A		; = 10 - LEVEL * 2 + 2 => 10 / 8 / 6 / 4
 	SUB $03	
-	LD (L5B0D),A	; = 10 - LEVEL * 2 + 2 - 3 => 7 / 5 / 3 / 1
+	LD (L5B0D),A		; = 10 - LEVEL * 2 + 2 - 3 => 7 / 5 / 3 / 1
 	RET
 
-; Initialize variables depending of Game level
+; Initialize variables depending of LEVEL
 InitLevelVars
-	LD A,(LEVEL)	; Game level 1..4
+	LD A,(LEVEL)		; LEVEL
 	ADD A,A	
-	ADD A,A		; *4
-	ADD A,$09	; A = LEVEL * 4 + 9 => 13 / 17 / 21 / 25
-	LD (L5B13),A	
-	LD (L5B14),A	
-	ADD A,$05	; A = LEVEL * 4 + 9 + 5 => 18 / 22 / 26 / 31
-	LD (L5B16),A	
+	ADD A,A			; *4
+	ADD A,$09		; A = LEVEL * 4 + 9 => 13 / 17 / 21 / 25
+	LD (L5B13),A		; set Number of Meduza objects
+	LD (L5B14),A		; set Number of Round fishes
+	ADD A,$05		; A = LEVEL * 4 + 9 + 5 => 18 / 22 / 26 / 31
+	LD (L5B16),A		; set Number of 26-byte records
 	SUB $05	
 	ADD A,A	
-	INC A		; A = (LEVEL * 4 + 9) * 2 + 1 => 27 / 35 / 43 / 51
+	INC A			; A = (LEVEL * 4 + 9) * 2 + 1 => 27 / 35 / 43 / 51
 	LD (L5B15),A	
-	DEC A		; A = (LEVEL * 4 + 9) * 2 => 26 / 34 / 42 / 50
-	LD (L5B17),A	
-	LD A,(LEVEL)	; Game level 1..4
+	DEC A			; A = (LEVEL * 4 + 9) * 2 => 26 / 34 / 42 / 50
+	LD (L5B17),A		; set Number of 26-byte records
+	LD A,(LEVEL)		; LEVEL
 	LD C,A	
 	ADD A,A	
 	ADD A,A	
-	ADD A,C		; A = LEVEL * 5 => 5 / 10 / 15 / 20
-	LD (L5B18),A	
+	ADD A,C			; A = LEVEL * 5 => 5 / 10 / 15 / 20
+	LD (L5B18),A		; set Number of 26-byte records
 	LD C,A	
 	ADD A,A	
 	ADD A,C	
-	SUB $03		; A = LEVEL * 5 * 3 - 3 => 12 / 27 / 42 / 57
-	LD (L5B19),A	
+	SUB $03			; A = LEVEL * 5 * 3 - 3 => 12 / 27 / 42 / 57
+	LD (L5B19),A		; Number of 28-byte records
 	LD HL,$0001	
 	LD (L5B25),HL	
-	LD A,(LEVEL)	; Game level 1..4
+	LD A,(LEVEL)		; LEVEL
 	NEG	
-	ADD A,$04	; 3 / 2 / 1 / 0
+	ADD A,$04		; 3 / 2 / 1 / 0
 	RET Z	
-	LD B,A		; B = loop counter
+	LD B,A			; B = loop counter
 	XOR A	
-LDC01	ADD A,$32	; +50
+LDC01	ADD A,$32		; +50
 	DJNZ LDC01	
 	LD (L5B25),A	
 	RET	
@@ -434,49 +434,49 @@ UpdateGauge
 	LD A,H	
 	AND $01	
 	LD H,A	
-	ADD HL,DE	; add base address
+	ADD HL,DE		; add base address
 	LD (HL),C	
 	RET	
 
 ; Update Depth indicator
 UpdateDepth
-	LD HL,(LDE55)	; get Depth indicator address
-	LD DE,$58FB	; base address in screen attributes area
+	LD HL,(LDE55)		; get Depth indicator address
+	LD DE,$58FB		; base address in screen attributes area
 	LD C,$28	
-	LD A,(L5B03+1)	; get screen position on mini-map, row value
+	LD A,(L5B03+1)		; get screen position on mini-map, row value
 	INC A	
 	SRL A	
-	AND $0F		; 0..15
+	AND $0F			; 0..15
 	CALL UpdateGauge	; Update the gauge indicator on the screen
-	LD (LDE55),HL	; set Depth indicator address
+	LD (LDE55),HL		; set Depth indicator address
 	RET
 
 LDE55	DEFW $0000	; Depth indicator, address in screen attributes
 LDE57	DEFW $0000	; Oxygen indicator, address in screen attributes
 LDE59	DEFW $0000	; Lives indicator, address in screen attributes
-LDE5B	DEFW $FFFF	; Oxygen level
+OXYGEN	DEFW $FFFF	; Oxygen level
 
 ; Update Oxygen indicator
 ; I: HL = new value for Oxygen
 UpdateOxygen
-	LD (LDE5B),HL	
+	LD (OXYGEN),HL	
 	LD A,H	
 	SRL A	
 	SRL A	
 	SRL A	
 	SRL A	
 	LD H,A	
-	LD A,$0F	; 0..15
+	LD A,$0F		; 0..15
 	SUB H	
-	LD DE,$58F9	; base address in screen attributes area
+	LD DE,$58F9		; base address in screen attributes area
 	LD C,$20	
-	LD HL,(LDE57)	; get Oxygen indicator address
+	LD HL,(LDE57)		; get Oxygen indicator address
 	CP $0E	
 	JR C,LDE7E	
-	CALL LE645	; Play melody LE629
+	CALL LE645		; Play melody LE629
 	LD C,$10	
 LDE7E	CALL UpdateGauge	; Update the gauge indicator on the scree
-	LD (LDE57),HL	; set Oxygen indicator address
+	LD (LDE57),HL		; set Oxygen indicator address
 	RET	
 
 ; Print decimal number
@@ -485,10 +485,10 @@ LDE7E	CALL UpdateGauge	; Update the gauge indicator on the scree
 PrintDec
 	LD (IX+$23),B	
 	PUSH DE	
-	LD IY,LE5E0	; address for list of dividers: 10000, 1000, 100, 10, 1
+	LD IY,LE5E0		; address for list of dividers: 10000, 1000, 100, 10, 1
 LDE8D	LD C,$FF	
 	LD E,(IY+$00)	
-	LD D,(IY+$01)	; get divider in DE
+	LD D,(IY+$01)		; get divider in DE
 	BIT 7,D	
 	JR Z,LDEA0	
 	LD (IX+$23),D	
@@ -512,9 +512,9 @@ LDEB6	EX (SP),HL
 	SLA C	
 	SLA C	
 	SLA C	
-	LD HL,$3D80	; ZX Charset (3D00) + $80 = address of char '0'
+	LD HL,$3D80		; ZX Charset (3D00) + $80 = address of char '0'
 	ADD HL,BC	
-	LD B,$08	; repeat 8 times
+	LD B,$08		; repeat 8 times
 	PUSH DE	
 LDEC7	LD A,(HL)	
 	LD (DE),A	
@@ -534,24 +534,24 @@ LDEC7	LD A,(HL)
 PrintHighScore
 	LD B,$00	
 	LD HL,(HSCORE)	
-	LD DE,$4059	; screen address AT 25,2
-	CALL PrintDec	; Print decimal number
+	LD DE,$4059		; screen address AT 25,2
+	CALL PrintDec		; Print decimal number
 	RET
 
 ; Print score number
 PrintScore
 	LD B,$00	
-	LD HL,(SCORE)	; get Score number
-	LD DE,$4099	; screen address AT 25,4
-	CALL PrintDec	; Print decimal number
+	LD HL,(SCORE)		; get Score number
+	LD DE,$4099		; screen address AT 25,4
+	CALL PrintDec		; Print decimal number
 	RET
 
 ; Print HELD number
 PrintHeld
 	LD B,$02	
-	LD HL,(HELD)	; get HELD value
-	LD DE,$40DA	; screen address AT 26,6
-	CALL PrintDec	; Print decimal number
+	LD HL,(HELD)		; get HELD value
+	LD DE,$40DA		; screen address AT 26,6
+	CALL PrintDec		; Print decimal number
 	RET
 
 LDEFD	DEFB $00,$00	
@@ -806,7 +806,7 @@ LE21C	PUSH BC
 	LD (IX+$18),A		; set Column
 	LD L,A	
 	LD H,(IX+$19)		; get Row
-	CALL LA164		; Convert char coords HL to ZX screen address
+	CALL GetScrAddr		; Convert char coords HL to ZX screen address
 	LD B,$03		; loop 3 times
 LE22C	PUSH BC	
 	PUSH HL	
@@ -984,8 +984,8 @@ LE364	BIT 5,(IX+$10)
 	RET NZ	
 	BIT 7,(IX+$10)	
 	JP Z,LE767	
-	LD HL,(LDE5B)		; get Oxygen level
-	LD A,(LEVEL)		; Game level 1..4
+	LD HL,(OXYGEN)		; get Oxygen level
+	LD A,(LEVEL)		; LEVEL
 	ADD A,A	
 	ADD A,A	
 	ADD A,A			; *8
@@ -994,10 +994,10 @@ LE364	BIT 5,(IX+$10)
 	LD D,$00	
 	LD A,H	
 	SBC HL,DE		; HL = [Oxygen] - LEVEL * 8 - 10
-	LD (LDE5B),HL		; set Oxygen level
+	LD (OXYGEN),HL		; set Oxygen level
 	CP H	
 	CALL NZ,UpdateOxygen	; => Update Oxygen indicator
-	LD A,(LDE5B+1)		; get Oxygen high byte
+	LD A,(OXYGEN+1)		; get Oxygen high byte
 	AND $F0			; out of Oxygen?
 	JR NZ,LE393	
 	CALL DiverExplosion	; Diver explosion
@@ -1021,7 +1021,7 @@ LE3A6	LD A,(HL)
 	PUSH HL	
 	EX DE,HL	
 	PUSH HL	
-	CALL LA14C		; Get screen attribute address
+	CALL GetScrAttrAddr	; Get screen attribute address
 	LD A,(HL)		; get attribute
 	POP HL	
 	CP $02			; red on black? (color for relief)
@@ -1033,7 +1033,7 @@ LE3C0	BIT 4,(IX+$10)
 	CP $FF	
 	JR NZ,LE3D2
 ;
-LE3CD	CALL DiverExplosion		; Diver explosion
+LE3CD	CALL DiverExplosion	; Diver explosion
 	JR LE418	
 LE3D2	OR A	
 	JR NZ,LE418	
@@ -1098,7 +1098,7 @@ LE45A	LD (IX+$09),L
 	LD (IX+$0B),L		; set sprite address
 	LD (IX+$0A),H	
 	LD (IX+$0C),H		; set sprite address
-	LD HL,LE61C	
+	LD HL,LE61C		; Melody address
 	CALL PlayMelody		; Play melody
 	LD HL,$0000	
 	LD (HELD),HL		; reset HELD value
@@ -1126,7 +1126,7 @@ LE47A	LD A,(IY+$01)		; get address hi
 	CP L			; same column?
 	JR NZ,LE4AB		; no => jump
 ; We've got Oxygen object
-	LD HL,(LDE5B)		; get Oxygen level
+	LD HL,(OXYGEN)		; get Oxygen level
 	LD BC,$00C8		; 200
 	ADD HL,BC	
 	JR NC,LE4A5	
@@ -1162,7 +1162,7 @@ LE4C3	BIT 6,(IX+$10)
 	LD A,(BC)	
 	DEC A	
 	ADD A,A	
-	LD HL,L5B2B		; get value 75 / 50 / 150 / 100, depending on Game level
+	LD HL,L5B2B		; get value 75 / 50 / 150 / 100, depending on LEVEL
 	LD C,A	
 	LD B,$00	
 	ADD HL,BC	
@@ -1182,7 +1182,7 @@ LE4C3	BIT 6,(IX+$10)
 	JR Z,LE4FB	
 	JR C,LE533	
 	JR LE509	
-LE4FB	LD BC,(L5B33)		; get value 25 / 50 / 75 / 100 depending of game level
+LE4FB	LD BC,(L5B33)		; get value 25 / 50 / 75 / 100 depending of LEVEL
 	LD (HELD),BC		; set HELD value
 	SET 6,(IX+$10)	
 	JR LE510	
@@ -1191,7 +1191,7 @@ LE509	LD HL,(HELD)		; get HELD value
 	LD (HELD),HL		; set HELD value
 LE510	POP DE	
 	EX DE,HL	
-	CALL LA14C		; Get screen attribute address
+	CALL GetScrAttrAddr	; Get screen attribute address
 	LD (HL),$06	
 	INC HL	
 	LD (HL),$06	
@@ -1217,7 +1217,7 @@ LE533	PUSH BC
 	INC DE	
 	LD A,H	
 	LD (DE),A	
-	LD HL,(L5B33)		; get value 25 / 50 / 75 / 100 depending of game level
+	LD HL,(L5B33)		; get value 25 / 50 / 75 / 100 depending of LEVEL
 	LD (HELD),HL		; set HELD value
 	SET 6,(IX+$10)	
 	POP DE	
@@ -1242,7 +1242,7 @@ LE553	BIT 1,A			; check "big/small" bit
 	LD A,(BC)	
 	BIT 3,A	
 	JP NZ,LE418	
-	LD HL,(L5B27)		; get value 2 / 4 / 6 / 8, depending on Game level
+	LD HL,(L5B27)		; get value 2 / 4 / 6 / 8, depending on LEVEL
 ; Update HELD value; HL = value to add
 LE578	LD A,(BC)	
 	BIT 4,A	
@@ -1289,12 +1289,12 @@ LE5BB	LD A,(BC)
 	JP NZ,LE418	
 	BIT 6,(IX+$10)	
 	JP NZ,LE418	
-	LD HL,(L5B29)		; get value 5 / 10 / 15 / 20, depending on Game level
+	LD HL,(L5B29)		; get value 5 / 10 / 15 / 20, depending on LEVEL
 	JR LE578		; jump to update HELD value
 
 ; DE = (L5B33) - HELD
 LE5D2	LD BC,(HELD)		; get HELD value
-	LD DE,(L5B33)		; get value 25 / 50 / 75 / 100 depending of game level
+	LD DE,(L5B33)		; get value 25 / 50 / 75 / 100 depending of LEVEL
 	EX DE,HL	
 	OR A	
 	SBC HL,BC	
@@ -1333,7 +1333,7 @@ LE60B	DEFB $06,$00,$01,$06,$00,$03,$06,$80
 	DEFB $00,$FF
 
 ; Play melody LE60B
-LE615	LD HL,LE60B	
+LE615	LD HL,LE60B		; Melody address
 	CALL PlayMelody		; Play melody
 	RET
 
@@ -1351,7 +1351,7 @@ LE638	DEFB $14,$00,$02,$1E,$00,$01,$32,$C8
 LE645	PUSH HL	
 	PUSH DE	
 	PUSH AF	
-	LD HL,LE629	
+	LD HL,LE629		; Melody address
 	CALL PlayMelody		; Play melody
 	POP AF	
 	POP DE	
@@ -1391,7 +1391,7 @@ LE69C	PUSH BC
 
 LE6AB	LD IX,DiverObj		; Diver object address
 	LD HL,$FFFF	
-	LD (LDE5B),HL		; reset Oxygen level
+	LD (OXYGEN),HL		; reset Oxygen level
 	LD A,(LIVES)		; get Number of lives
 	DEC A	
 	CALL LE682	
@@ -1480,7 +1480,7 @@ LE78C	LD BC,(L5B3E)		; get port for Accelerate key
 	IN A,(C)		; Read from port for the key
 	AND L	
 	RET NZ			; Return if not pressed
-	LD HL,LE634	
+	LD HL,LE634		; Melody address
 	CALL PlayMelody		; Play melody
 	BIT 2,(IX+$26)	
 	JR NZ,LE7C2	
@@ -1525,7 +1525,7 @@ LE7F1	SET 1,(IX+$26)
 	LD (IX+$06),$04		; set initial Angle = 4
 	SET 7,(IX+$10)	
 	RES 0,(IX+$10)		; clear "moving" bit
-	LD A,(LEVEL)		; Game level 1..4
+	LD A,(LEVEL)		; LEVEL
 	LD C,A	
 	LD A,$05	
 	SUB C			; A = 5 - LEVEL
@@ -1555,7 +1555,7 @@ LE848	SET 1,(IX+$26)
 	LD (IX+$06),$04	
 	SET 7,(IX+$10)	
 	RES 0,(IX+$10)		; clear "moving" bit
-	LD A,(LEVEL)		; Game level 1..4
+	LD A,(LEVEL)		; LEVEL
 	LD C,A	
 	LD A,$05	
 	SUB C			; A = 5 - LEVEL
@@ -1594,15 +1594,15 @@ LE88A	LD (IX+$1E),$00
 	LD A,(L5B0F)	
 	CP $03	
 	JR NZ,LE8FA	
-	LD HL,(L5B31)		; get value depending on game level
+	LD HL,(L5B31)		; get value depending on LEVEL
 	LD DE,(SCORE)		; get Score number
 	ADD HL,DE	
 	LD (SCORE),HL		; set Score number
 	CALL PrintScore		; Print score number
 	SET 4,(IX+$26)	
-	LD HL,LE638	
+	LD HL,LE638		; Melody address
 	CALL PlayMelody		; Play melody
-	LD HL,LE638	
+	LD HL,LE638		; Melody address
 	CALL PlayMelody		; Play melody
 LE8FA	LD (IX+$04),$00		; clear DX value
 	LD (IX+$0F),$03	
@@ -1822,7 +1822,7 @@ LEB2B	LD B,$0B
 	PUSH DE	
 	LD L,$19	
 	LD H,(IX+$1F)	
-	CALL LA164		; Convert char coords HL to ZX screen address
+	CALL GetScrAddr		; Convert char coords HL to ZX screen address
 	POP DE	
 	EX DE,HL	
 	LD B,$00	
@@ -2112,7 +2112,7 @@ LEE7D	SUB $31			; -'1'
 	CP $04			; >= 4 ?
 	JR NC,LEE1C	
 	INC A			; 1..4
-	LD (LEVEL),A		; Save game level 1..4
+	LD (LEVEL),A		; Save LEVEL
 ; Game level selected, starting the game
 	LD HL,LEDD5	
 	CALL PlayMelody		; Play melody
@@ -2141,7 +2141,7 @@ LEEAD	LD A,(FRAMES+1)		; get FRAMES hi byte
 	PUSH IY	
 	DI	
 	CALL PrepareMiniMap	; Prepare the world MiniMap table
-	CALL InitLevelVars	; Initialize variables depending of Game level
+	CALL InitLevelVars	; Initialize variables depending of LEVEL
 	CALL LBEDB	
 	LD HL,$0518	
 	LD (L5B03),HL		; set Screen position on mini-map
