@@ -36,7 +36,7 @@ L5B1F	DEFW $0000	; Address of 26-byte records in block LC4F0; L5B16 is number of
 L5B21	DEFW $0000	; Address of 26-byte records in block LC4F0; L5B17 is number of records
 L5B23	DEFW $0000	; Address of 26-byte records in block LC4F0; L5B18 is number of records
 L5B25	DEFW $0001	; Value 150 / 100 / 50 / 1, depending on LEVEL
-; 14 bytes copied from DDF0 + (LEVEL - 1) * 16
+; 14 bytes copied from LDDF0 + (LEVEL - 1) * 16
 L5B27	DEFW $0000
 L5B29	DEFW $0000
 L5B2B	DEFW $0000,$0000

@@ -44,7 +44,7 @@ LD9A3	CALL PrepareMiniMap	; Prepare the world MiniMap table
 	CALL LBEDB	
 	LD HL,LE361	
 	LD (HL),$00	
-LD9B1	CALL LDAAD		; Prepare game screen and some variables
+LD9B1	CALL PrepareGame	; Prepare game screen and some variables
 	CALL LE6AB	
 	LD HL,(L5B03)		; get Screen position on mini-map
 	CALL DrawGameScr	; Draw game screen
@@ -186,7 +186,8 @@ LDAA2	CALL LDA59		; Print char and shift !!! mutable argument DA59 / DA63
 	RET
 
 ; Prepare game screen, indicators, and some variables
-LDAAD	LD A,$30	
+PrepareGame
+	LD A,$30	
 	CALL LDA39		; Clear screen with attribute A
 	LD A,$01	
 	OUT ($FE),A	
@@ -246,23 +247,23 @@ LDAAD	LD A,$30
 	LD (LDE57),HL		; set Oxygen initial level
 	LD (HL),$20		; indicate initial Oxygen level
 	LD A,(LEVEL)		; LEVEL
-	DEC A	
-	RRCA	
-	RRCA	
+	DEC A			; 0 / 1 / 2 / 3
+	RRCA			; 
+	RRCA			; $00 / $40 / $80 / $C0
 	LD E,A	
 	LD D,$00	
 	LD HL,$58FD		; base address in attributes area
 	ADD HL,DE	
 	LD (HL),$4F		; indicate Game level
 	LD A,(LIVES)		; get Number of lives
-	DEC A	
-	RRCA	
-	RRCA	
+	DEC A			; 0 / 1 / 2 / 3
+	RRCA			;
+	RRCA			; $00 / $40 / $80 / $C0
 	LD E,A	
 	LD D,$00	
 	LD HL,$5A1D		; base address in attributes area
 	ADD HL,DE	
-	LD (LDE59),HL	
+	LD (LDE59),HL		; save address in attributes area
 	LD (HL),$4F		; indicate nummber of lives
 	LD IX,DiverObj		; Diver object address
 	CALL PrintHighScore	; Print high score number
@@ -796,10 +797,10 @@ LE1F4	CALL LB3A6
 	LD E,(IX+$07)	
 	BIT 0,(IX+$0D)	
 	JR NZ,LE211	
-	LD IY,LA41B	
+	LD IY,LA41B		; empty sprite address
 LE211	BIT 1,(IX+$0D)	
 	JR NZ,LE21A	
-	LD DE,LA41B	
+	LD DE,LA41B		; empty sprite address
 LE21A	LD B,$03		; loop 3 times
 LE21C	PUSH BC	
 	LD A,(IX+$00)	
@@ -1358,6 +1359,7 @@ LE645	PUSH HL
 	POP HL	
 	RET
 
+; Sprites for 1/2/3 divers on the boat; width 2 chars, 16 bytes each sprite
 LE652	DEFB $00,$0C,$00,$1E,$00,$0C,$00,$1E	
 	DEFB $00,$1E,$00,$1E,$FF,$FF,$FF,$FF	
 	DEFB $01,$8C,$03,$DE,$01,$8C,$03,$DE	
@@ -1365,12 +1367,14 @@ LE652	DEFB $00,$0C,$00,$1E,$00,$0C,$00,$1E
 	DEFB $31,$8C,$7B,$DE,$31,$8C,$7B,$DE	
 	DEFB $7B,$DE,$7B,$DE,$FF,$FF,$FF,$FF
 
+; Draw Divers on the Boat
+; I: A = lives left (number of divers on the boat)
 LE682	OR A	
 	JR NZ,LE68A	
-	LD HL,LA41B	
+	LD HL,LA41B		; empty sprite address
 	JR LE697	
-LE68A	LD HL,LE652	
-	LD DE,$0010	
+LE68A	LD HL,LE652		; Divers on the boat sprite address base
+	LD DE,$0010		; shift to next sprite
 	DEC A	
 	JR Z,LE697	
 	LD B,A			; B = loop counter
@@ -1379,8 +1383,8 @@ LE694	ADD HL,DE
 LE697	LD B,$06		; repeat 6 times
 	LD DE,$8CD6		; ???
 LE69C	PUSH BC	
-	LDI	
-	LDI	
+	LDI			; copy pixels
+	LDI			; copy pixels
 	LD BC,$0005	
 	EX DE,HL	
 	ADD HL,BC	
@@ -1390,11 +1394,11 @@ LE69C	PUSH BC
 	RET	
 
 LE6AB	LD IX,DiverObj		; Diver object address
-	LD HL,$FFFF	
+	LD HL,$FFFF		; maximum Oxygen
 	LD (OXYGEN),HL		; reset Oxygen level
 	LD A,(LIVES)		; get Number of lives
-	DEC A	
-	CALL LE682	
+	DEC A			; one less = lives left
+	CALL LE682		; Draw Divers on the Boat
 	LD A,(LC4F0)	
 	LD C,A	
 	SRL A	
@@ -1412,7 +1416,7 @@ LE6AB	LD IX,DiverObj		; Diver object address
 	LD (IX+$01),$06	
 	LD (IX+$14),$0C		; set Y value = 12
 	SET 3,(IX+$10)	
-	LD A,(LC4F2)	
+	LD A,(LC4F0+2)	
 	LD (IX+$27),A	
 	LD (IX+$04),$00		; clear DX value
 	LD (IX+$05),$00		; clear DY value
@@ -1422,17 +1426,17 @@ LE6AB	LD IX,DiverObj		; Diver object address
 	LD (IX+$0E),$14		; speed factor = min speed
 	LD (IX+$12),$00	
 	LD (IX+$11),$FF	
-	LD A,L	
+	LD A,L			; get screen position on mini-map (column)
 	ADD A,A	
 	ADD A,A	
-	ADD A,A	
+	ADD A,A			; *8
 	LD L,A	
 	LD A,C	
 	SUB L	
 	ADD A,$03	
 	LD (IX+$00),A		; set Column value
 	LD C,A	
-	LD A,(LC4F2)	
+	LD A,(LC4F0+2)	
 	ADD A,$03	
 	BIT 3,A	
 	JR Z,LE72C	
@@ -1469,7 +1473,7 @@ LE767	BIT 0,(IX+$26)
 	LD (IX+$0F),$03	
 	LD (IX+$04),$00		; clear DX value
 	LD (IX+$05),$00		; clear DY value
-	LD A,(LC4F2)	
+	LD A,(LC4F0+2)	
 	CP (IX+$27)	
 	JR Z,LE78C	
 	LD (IX+$27),A	
@@ -1607,7 +1611,7 @@ LE88A	LD (IX+$1E),$00
 LE8FA	LD (IX+$04),$00		; clear DX value
 	LD (IX+$0F),$03	
 	LD (IX+$20),$03	
-	LD A,(LC4F2)	
+	LD A,(LC4F0+2)	
 	CP (IX+$27)	
 	RET Z	
 	LD (IX+$27),A	
@@ -1648,7 +1652,7 @@ LE93C	SET 1,(IX+$0D)
 	SET 0,(IX+$26)	
 	SET 2,(IX+$26)	
 	SET 3,(IX+$26)	
-	LD A,(LC4F2)	
+	LD A,(LC4F0+2)	
 	LD (IX+$27),A	
 	LD (IX+$04),$00		; clear DX value
 	LD (IX+$05),$FF		; set DY = -1
@@ -1666,7 +1670,7 @@ LE97C	LD (IX+$00),C		; set Column value
 	LD (IX+$28),$00	
 	LD HL,L9B8C		; Sprite diver climbing on the boat
 	LD (IX+$24),L		; set sprite address
-	LD (IX+$25),H
+	LD (IX+$25),H		;
 	SET 0,(IX+$0D)	
 	RES 1,(IX+$0D)	
 	CALL LDFD5	
@@ -1677,6 +1681,7 @@ LE97C	LD (IX+$00),C		; set Column value
 	LD (HL),$00	
 	JP LE418	
 
+; Plus one live
 ; I: IX = Diver object address = DiverObj
 LE9B0	SET 5,(IX+$26)	
 	PUSH HL	
@@ -1688,10 +1693,10 @@ LE9B0	SET 5,(IX+$26)
 	LD (LDE59),HL		; set address in attributes for Lives indicator
 	LD (HL),$4F		; indicate new value
 	LD HL,LIVES		; address for Number of lives
-	LD A,(HL)	
+	LD A,(HL)		; get number of lives
 	INC (HL)		; one more lives
 	PUSH BC	
-	CALL LE682	
+	CALL LE682		; Draw Divers on the Boat
 	POP BC	
 	POP DE	
 	POP HL	
@@ -1917,7 +1922,7 @@ LEBDB	PUSH HL
 	POP HL	
 	RET	
 
-; Texts used for indicator panel
+; Texts used for table of records
 LEBEE	DEFM $10,$07,$11,$01,$16,$01,$09	
 	DEFM "* SCUBA DIVE *"	
 	DEFM $10,$00,$11,$06,$16,$05,$00	
@@ -2013,10 +2018,10 @@ LED1C	IN A,(C)
 	RET	
 
 ; UDG symbols $90..$93 used for Redefine keys
-LED23	DEFB $18,$24,$42,$87,$87,$42,$20,$18	
-	DEFB $18,$20,$42,$87,$87,$42,$24,$18	
-	DEFB $08,$0C,$0E,$FF,$FF,$0E,$0C,$08	
-	DEFB $00,$00,$10,$30,$7E,$30,$10,$00	
+LED23	DEFB $18,$24,$42,$87,$87,$42,$20,$18	; $90 - Clockwise
+	DEFB $18,$20,$42,$87,$87,$42,$24,$18	; $91 - Anticlockwise
+	DEFB $08,$0C,$0E,$FF,$FF,$0E,$0C,$08	; $92 - Right
+	DEFB $00,$00,$10,$30,$7E,$30,$10,$00	; $93 - Left
 ; Text for Redefine keys
 LED43	DEFB $10,$00,$11,$06,$16,$03,$05	
 	DEFM "                      "	
@@ -2124,6 +2129,7 @@ LEE7D	SUB $31			; -'1'
 	CALL Game		; Game
 	CALL LEA7A	
 	JP LEE1C	
+;
 LEEA7	CALL LEADE	
 	JP LEE1C	
 
@@ -2149,7 +2155,7 @@ LEEAD	LD A,(FRAMES+1)		; get FRAMES hi byte
 	POP IY	
 	POP IX	
 	LD DE,LEF7F		; "PRESS ANY KEY"
-	LD BC,$0014	
+	LD BC,$0014		; 20 chars
 	CALL ROM_PRSTRING	; ROM call PR-STRING
 	PUSH IX	
 	PUSH IY	

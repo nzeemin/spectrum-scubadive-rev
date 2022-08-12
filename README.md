@@ -41,8 +41,8 @@ The reversed code structure:
  - <code>scubacoda.asm</code> - block $4000-$5BED
    - <code>scubascrn.dat</code> - loading screen in raw binary format
  - <code>scubacodb.asm</code> - block $6000-$C4FF
-   - <code>scubasprt.dat</code> - sprites $6000-$9C4F
-   - <code>scubarelf.dat</code> - relief tiles and world mini-map
+   - <code>scubasprt.asm</code> - sprites $6000-$9C4F
+   - <code>scubarelf.asm</code> - relief tiles and world mini-map
  - <code>scubacodc.asm</code> - block $D900-$F0FF
 
 All three .asm code files are compiled with pasmo cross-assembler, and compared to original binary blocks byte-to-byte, no differences.

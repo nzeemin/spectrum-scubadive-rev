@@ -15,7 +15,7 @@
 
 L9C50	DEFB $00	; $00 = no Octopus, $01 = we have Octopus on the game screen
 L9C51	DEFW $0000	; Octopus screen address
-L9C53	DEFW $A41B	; ??? LA41B or Octopus sprite address
+L9C53	DEFW $A41B	; Octopus previous sprite address or LA41B for empty sprite
 L9C55	DEFB $04	; Octopus phase
 
 ; Draw game screen
@@ -43,8 +43,8 @@ L9C6C	PUSH BC
 	JR NZ,L9C89		; no => skip
 	LD (L9C51),HL		; save the Octopus screen address
 	PUSH HL	
-	LD HL,LA41B	
-	LD (L9C53),HL	
+	LD HL,LA41B		; empty sprite address
+	LD (L9C53),HL		; set previous sprite
 	POP HL	
 	LD A,$01		; flag value
 	LD (L9C50),A		; we have the Octopus on the screen
@@ -155,7 +155,7 @@ L9CEB	LD (IX+$00),C		; set screen attribute
 	CALL LB346		; Draw Octopus
 L9D38	POP IY	
 L9D3A	POP IX	
-L9D3C	CALL LB0A9		; Draw static objects on the screen; prepare LB07D table
+L9D3C	CALL DrawStatics	; Draw static objects on the screen; prepare LB07D table
 	RET	
 
 ; Calculate address in the MiniMap table
@@ -1031,6 +1031,7 @@ TableStatics
 	DEFB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
 LA40C	DEFB $B2,$1D,$EA,$53,$DE,$69,$DE,$01,$53,$48,$46,$B5,$7A,$EA,$5E
 
+; Empty sprite
 LA41B	DEFB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00	
 	DEFB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00	
 	DEFB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00	
@@ -1066,7 +1067,8 @@ LB07D	DEFB $01,$01,$01,$01
 	DEFB $03,$00,$00,$00	
 
 ; Draw static objects on the screen; prepare LB07D table
-LB0A9	LD DE,(L5B03)		; get Screen position on mini-map
+DrawStatics
+	LD DE,(L5B03)		; get Screen position on mini-map
 	LD A,D			; get row
 	RLCA	
 	RLCA	
@@ -1445,26 +1447,26 @@ LB358	EX DE,HL		; now DE = Octopus sprite address
 ; I: DE = Octopus sprite address, 6x4 tiles 8x8 pixels, 192 bytes
 LB35D	DI	
 	PUSH IY	
-	LD IY,(L9C53)	
-	LD (L9C53),DE	
+	LD IY,(L9C53)		; now IY = previous Octopus sprite address
+	LD (L9C53),DE		; store new Octopus sprite address
 	LD HL,(L9C51)		; get the Octopus screen address
 	INC HL	
 	INC HL	
-	LD C,$04		; repeat 4 times - height
-LB36F	LD B,$06		; repeat 6 times - width
+	LD C,$04		; repeat 4 times - height in chars
+LB36F	LD B,$06		; repeat 6 times - width in chars
 	PUSH HL	
 LB372	PUSH BC	
 	LD B,$08		; repeat 8 times
 	PUSH HL	
 LB376	LD A,(DE)		; get pixels
 	XOR (HL)		; XOR with screen pixels
-	XOR (IY+$00)	
+	XOR (IY+$00)		; XOR with previous sprite pixels
 	LD (HL),A		; write to the screen
-	INC DE	
-	INC IY	
+	INC DE			; next sprite byte
+	INC IY			; next previous sprite byte
 	INC H			; next pixel row
 	DJNZ LB376	
-	POP HL	
+	POP HL			; restore screen address
 	INC L			; next column
 	POP BC	
 	DJNZ LB372		; continue by columns
@@ -1473,7 +1475,7 @@ LB376	LD A,(DE)		; get pixels
 	ADD A,$20	
 	LD L,A	
 	DEC C	
-	JR NZ,LB36F		; continue by rows
+	JR NZ,LB36F		; continue by char rows
 	POP IY	
 	RET
 
@@ -1481,7 +1483,7 @@ LB392	DEFB $00,$00,$00,$00,$00,$00,$00,$00
 	DEFB $32,$32,$32,$1D,$02,$32
 
 ; I: IX = record address in block LC4F0
-; I: IY = ???
+; I: IY = record address in block LC092
 LB3A0	BIT 4,(IX+$0D)	
 	JR Z,LB3AB
 ;
@@ -1602,7 +1604,7 @@ LB479	LD D,(IX+$08)
 	BIT 1,(IX+$0D)	
 	JR NZ,LB496	
 	PUSH DE	
-	LD C,(IY+$09)	
+	LD C,(IY+$09)		; get sprite char width
 	LD L,(IY+$0A)		; get record size ??
 	XOR A	
 LB48D	LD B,L			; loop counter = record size
@@ -1615,7 +1617,7 @@ LB48E	LD (DE),A		; clear the record
 LB496	LD HL,(LB7B9)	
 	BIT 0,(IX+$0D)	
 	JR NZ,LB4A2	
-	LD HL,LA41B	
+	LD HL,LA41B		; empty sprite address
 LB4A2	LD B,(IY+$07)	
 LB4A5	LD A,(IY+$02)		; get column
 	AND $E0			; check column for 0..31 range
@@ -1641,7 +1643,7 @@ LB4C4	LD (IY+$0E),B		; set width
 	PUSH IX	
 	PUSH HL	
 	POP IX	
-	LD B,(IY+$09)	
+	LD B,(IY+$09)		; get sprite char width
 LB4D6	PUSH BC	
 LB4D7	LD A,(IY+$03)		; get row
 	CP $18			; < 24 ?
@@ -1726,9 +1728,9 @@ LB565	LD A,(IX+$03)
 
 ; Copy records forward
 ; I: HL = source address, DE = destination address
-; I: IY = ??? (IY+$0A) is record size
+; I: IY = record address in LC092 area
 ; I: B = number of records to copy
-CopyRecordsFwd
+CopyRecordsFwd	; LB572
 	PUSH BC	
 	LD C,(IY+$0A)		; get record size
 	LD B,$00	
@@ -1766,7 +1768,9 @@ CopyRecordsBck
 	DJNZ CopyRecordsBck	
 	RET
 
-; I: HL = ???
+; I: HL = ???; $F200 $F500 $F700
+; I: IX = ???; $C727 $C78F
+; I: IY = record address in LC092 area
 LB5A4	BIT 7,(IX+$12)	
 	JR NZ,LB5C1	
 	PUSH HL	
@@ -1801,8 +1805,8 @@ LB5DB	LD (DE),A		; clear the record
 	DJNZ LB5DB	
 	RET	
 
-; I: IX = object record address; $C4F0 $C505 $C51A $C52F $C544 $C559 $C56E $C583 $C598 $C5AD  $C78F  $C8C7
-; I: IY = ???; $C092 $C0A2 $C0B2 $C0EA $C102 $C11A $C132 $C14A $C182
+; I: IX = record address in LC4F0 area
+; I: IY = record address in LC092 area
 LB5E0	RES 1,(IX+$0D)	
 	BIT 0,(IX+$0D)	
 	JR Z,LB5EE	
@@ -1873,8 +1877,8 @@ LB65F	BIT 1,A
 
 LB676	DEFS $10
 
-; I: IX = object record address; $C4F0 $C62B $C640 $C655 $C66A $C775 $C7A9 $C7C3 $C7DD $C7F7 $C811 $C82B $C845
-; I: IY = ???; $C0A2 $C0B2 $C0EA $C102 $C11A $C132 $C14A $C182
+; I: IX = record address in LC4F0 area
+; I: IY = record address in LC092 area
 LB686	BIT 5,(IX+$0D)	
 	JR Z,LB6D6	
 	LD L,(IY+$00)		; get column
@@ -1938,8 +1942,8 @@ LB704	LD L,(IY+$00)		; get column
 	JP LB875	
 
 ; Screen attribute change for horizontally oriented object
-; I: IX = object record address; $C4F0 $C598 $C655 $C7A9 $C7F7 $C811 $C82B $C845 $C85F $C893 $C8AD
-; I: IY = ???; $C092 $C0A2 $C0B2 $C0EA $C102 $C11A $C132
+; I: IX = record address in LC4F0 area
+; I: IY = record address in LC092 area
 ; I: HL = (row, column)
 LB70F	LD A,H			; row
 	AND $E0			; check for 0..31 range
@@ -1968,7 +1972,7 @@ LB732	INC L			; next column
 	POP HL	
 	RET
 
-; I: IX = record address in block LC4F0; $C4F0 $C52F $C601 $C62B $C640 $C712 $C727 $C85F
+; I: IX = record address in LC4F0 area
 LB737	LD D,(IX+$14)	
 	LD E,(IX+$13)		; now DE = object record address in block LC092
 	PUSH DE	
@@ -2021,16 +2025,16 @@ LB7AA	CP $04
 ; Point of return
 LB7B8	RET
 
-LB7B9	DEFS $02
+LB7B9	DEFS $02	; ?? $F000
 
-; I: IX = object address in block LC4F0; $C505 $C893 $C8E1
+; I: IX = object address in LC4F0 area
 LB7BB	LD A,(IX+$0D)	
-	AND $9E	
+	AND $9E			; clear bits 0,5,6
 	LD (IX+$0D),A	
-	LD E,(IX+$13)	
+	LD E,(IX+$13)		;
 	LD D,(IX+$14)		; get record address in block LC092
 	PUSH DE	
-	POP IY	
+	POP IY			; now IY = record address in block LC092
 	LD A,(IX+$02)	
 	ADD A,(IX+$11)	
 	AND $07			; 0..7
@@ -2075,6 +2079,8 @@ LB828	CP $04
 ; Point of return
 LB836	RET	
 
+; I: IX = ??; $C505 $C6D3 $C78F
+; I: IY = record address in LC092 area
 LB837	LD A,$06	
 	BIT 0,(IX+$0D)	
 	JR NZ,LB842	
@@ -2111,6 +2117,8 @@ LB87B	CALL LB70F		; Screen attribute change for horizontally oriented object
 	JR NZ,LB87B	
 	RET
 
+; Moving procedure for fish object moving horizontal
+; I: IX = object record
 LB885	BIT 0,(IX+$10)		; check "moving" bit
 	JP NZ,LB941	
 	BIT 7,(IX+$11)	
@@ -2211,6 +2219,8 @@ LB95D	LD (IX+$09),L		; set sprite address
 	SRL (IX+$0E)	
 	RET	
 
+; Moving procedure for fish object moving vertical
+; I: IX = object record
 LB972	BIT 0,(IX+$10)		; check "moving" bit
 	JP NZ,LBA33	
 	BIT 7,(IX+$12)	
@@ -2239,13 +2249,13 @@ LB98A	LD H,A
 	LD DE,($5B0B)	
 	LD A,H	
 	SUB D	
-	CP $18	
+	CP $18			; 24
 	JR NC,LB9C7	
 	LD D,A	
 	LD A,L	
 	DEC A	
 	SUB E	
-	CP $18	
+	CP $18			; 24
 	JR NC,LB9C7	
 	LD L,A	
 	LD H,D	
@@ -2319,6 +2329,8 @@ LBA4F	LD (IX+$09),L
 	SRL (IX+$0E)	
 	RET	
 
+; Moving procedure for fish object moving horizontal
+; I: IX = object record
 LBA64	BIT 0,(IX+$10)		; check "moving" bit
 	JP NZ,LBC8F	
 	SET 5,(IX+$10)	
@@ -2652,6 +2664,9 @@ LBD7B	LD (IX+$12),A
 	SET 2,(IX+$0D)	
 	RET	
 
+; I: L = ??
+; I: C = ??
+; I: IX = ??; $C505 $C51A $C52F $C544 $C559
 LBD83	LD A,L	
 	AND C	
 	ADD A,C	
@@ -2742,53 +2757,53 @@ LBE36	CALL LC431
 	CALL LC4D5	
 	RET
 
-LBE40	LD A,(L5B16)		; get value 18 / 22 / 26 / 31, depending on LEVEL	
-	LD B,A	
+LBE40	LD A,(L5B16)		; get Number of 26-byte records: 18 / 22 / 26 / 31, depending on LEVEL	
+	LD B,A			; loop counter
 	LD IX,(L5B1F)		; now IX = record address in block LC4F0
 LBE48	PUSH BC	
 	DEC (IX+$0F)	
 	CALL Z,LB737	
-	LD BC,$001A		; 26
-	ADD IX,BC	
+	LD BC,$001A		; 26 - record size
+	ADD IX,BC		; next record
 	POP BC	
 	DJNZ LBE48	
 	RET
 
-LBE58	LD A,(L5B16)		; get value 18 / 22 / 26 / 31, depending on LEVEL
+LBE58	LD A,(L5B16)		; get Number of 26-byte records: 18 / 22 / 26 / 31, depending on LEVEL
 	LD B,A	
 	LD IX,(L5B1F)		; now IX = record address in block LC4F0
 LBE60	PUSH BC	
 	CALL LB7BB	
-	LD BC,$001A		; 26
-	ADD IX,BC	
+	LD BC,$001A		; 26 - record size
+	ADD IX,BC		; next record
 	POP BC	
 	DJNZ LBE60	
 	RET
 
-LBE6D	LD A,(L5B17)		; get value 26 / 34 / 42 / 50, depending on LEVEL	
+LBE6D	LD A,(L5B17)		; get Number of 26-byte records: 26 / 34 / 42 / 50, depending on LEVEL	
 	LD B,A	
 	LD IX,(L5B21)		; now IX = record address in block LC4F0
 LBE75	PUSH BC	
 	DEC (IX+$0F)	
 	CALL Z,LB737	
-	LD BC,$001A		; 26
-	ADD IX,BC	
+	LD BC,$001A		; 26 - record size
+	ADD IX,BC		; next record
 	POP BC	
 	DJNZ LBE75	
 	RET	
 
-LBE85	LD A,(L5B17)		; get value 26 / 34 / 42 / 50, depending on LEVEL
+LBE85	LD A,(L5B17)		; get Number of 26-byte records: 26 / 34 / 42 / 50, depending on LEVEL
 	LD B,A	
 	LD IX,(L5B21)	
 LBE8D	PUSH BC	
 	CALL LB7BB	
-	LD BC,$001A		; 26
-	ADD IX,BC	
+	LD BC,$001A		; 26 - record size
+	ADD IX,BC		; next record
 	POP BC	
 	DJNZ LBE8D	
 	RET
 
-LBE9A	LD A,(L5B15)		; get number of 21-byte records: 27 / 35 / 43 / 51, depending on LEVEL	
+LBE9A	LD A,(L5B15)		; get Number of 21-byte records: 27 / 35 / 43 / 51, depending on LEVEL	
 	LD B,A			; loop count
 	LD IX,LC4F0		; record address
 LBEA2	PUSH BC	
@@ -2800,7 +2815,7 @@ LBEA2	PUSH BC
 	DJNZ LBEA2	
 	RET
 
-LBEB2	LD A,(L5B15)		; get number of 21-byte records: 27 / 35 / 43 / 51, depending on LEVEL
+LBEB2	LD A,(L5B15)		; get Number of 21-byte records: 27 / 35 / 43 / 51, depending on LEVEL
 	LD B,A			; loop count
 	LD IX,LC4F0		; record address
 LBEBA	PUSH BC	
@@ -2886,12 +2901,12 @@ LBF5D	DJNZ LBF1D
 	LD (L5B1F),DE		; save address for 26-byte records
 	LD A,(L5B16)		; get number of records: 18 / 22 / 26 / 31, depending on LEVEL
 	LD HL,$0F1B	
-	LD IY,LC2EB		; table address with record templates
+	LD IY,LC2EB		; table address with record templates, horizontal movement
 	CALL LBFB0	
 	LD (L5B21),DE		; save address for 26-byte records
 	LD A,(L5B17)		; get number of records: 26 / 34 / 42 / 50, depending on LEVEL	
 	LD HL,$2A3B	
-	LD IY,LC331		; table address with record templates
+	LD IY,LC331		; table address with record templates, horizontal movement
 	CALL LBFB0	
 	LD (L5B23),DE		; save address for 26-byte records
 	LD IY,LBFA0	
@@ -3039,28 +3054,46 @@ LC04F	LD A,H
 ; Object records
 ;	(IY+$00) - ??
 ;	(IY+$01) - ??
-;	(IY+$02) - ??
-;	(IY+$03) - ??
+;	(IY+$02) - ?? colummn
+;	(IY+$03) - ?? row
 ;	(IY+$06) - ??
-;	(IY+$07) - record width
-;	(IY+$08) - ??
-LC092	DEFW $0000,$0000,$0000,$0807,$0403,$1840,$C080,$0000	
-LC0A2	DEFW $0000,$0000,$0000,$0201,$0302,$1010,$2030,$0000	
-LC0B2	DEFW $0000,$0000,$C0CE,$0302,$0201,$0818,$1803,$0000,$8285,$8254,$82B6,$82E6,$82C6,$82F6	
-LC0CE	DEFW $0000,$0000,$C0B2,$0201,$0302,$1010,$2003,$0000,$8347,$8316,$8378,$83A8,$8388,$83B8	
-LC0EA	DEFW $0000,$0000,$0000,$0706,$0302,$1038,$7005,$0000,$64E5,$6364,$6666,$6846	
-LC102	DEFW $0000,$0000,$0000,$0807,$0403,$1840,$C006,$0000,$70B7,$6A26,$6CC7,$7358	
-LC11A	DEFW $0000,$0000,$0000,$0504,$0201,$0828,$2804,$0000,$7BCE,$7C4F,$7D50,$7CD0	
-LC132	DEFW $0000,$0000,$0000,$0403,$0403,$1820,$6001,$0000,$7748,$7869,$7942,$7821	
-LC14A	DEFW $0000,$0000,$C166,$0403,$0201,$0820,$2005,$0000,$60D9,$6000,$6061,$613A,$6091,$616A	
-LC166	DEFW $0000,$0000,$C14A,$0201,$0403,$1810,$3005,$0000,$628B,$61B2,$6213,$62EC,$6243,$631C	
-LC182	DEFW $0000,$0000,$C19E,$0403,$0201,$0820,$2003,$0000,$7A1B,$798A,$79D3,$7A64,$79EB,$7A7C	
-LC19E	DEFW $0000,$0000,$C182,$0201,$0403,$1810,$3003,$0000,$7AF5,$7AAC,$7B3E,$7B86,$7B56,$7B9E	
-LC1BA	DEFW $0000,$0000,$C1D6,$0504,$0201,$0828,$2805,$0000,$7EF1,$7DD0,$7E51,$7F72,$7E91,$7FB2	
-LC1D6	DEFW $0000,$0000,$C1BA,$0201,$0504,$2010,$4005,$0000,$8133,$8012,$8093,$81B4,$80D3,$81F4	
-LC1F2	DEFW $0000,$0000,$0000,$0807,$0302,$1040,$8006,$0000,$8839,$83D8,$8599,$89FA
+;	(IY+$07) - ??
+;	(IY+$08) - sprite char height
+;	(IY+$09) - sprite char width
+;	(IY+$0A) - ??
+;	(IY+$0E)
+;	(IY+$0F)
+LC092	DEFW $0000,$0000,$0000,$0807,$0403,$1840,$C080,$0000	; Boat
+LC0A2	DEFW $0000,$0000,$0000,$0201,$0302,$1010,$2030,$0000	; Meduza
+LC0B2	DEFW $0000,$0000,LC0CE,$0302,$0201,$0818,$1803,$0000
+	DEFW L8285,L8254,L82B6,L82E6,L82C6,L82F6		; Round fish
+LC0CE	DEFW $0000,$0000,LC0B2,$0201,$0302,$1010,$2003,$0000
+	DEFW L8347,L8316,L8378,L83A8,L8388,L83B8		; Round fish vertical
+LC0EA	DEFW $0000,$0000,$0000,$0706,$0302,$1038,$7005,$0000
+	DEFW L64E5,L6364,L6666,L6846				; Fish
+LC102	DEFW $0000,$0000,$0000,$0807,$0403,$1840,$C006,$0000
+	DEFW L70B7,L6A26,L6CC7,L7358				; Shark
+LC11A	DEFW $0000,$0000,$0000,$0504,$0201,$0828,$2804,$0000
+	DEFW L7BCE,L7C4F,L7D50,L7CD0				; Long fish
+LC132	DEFW $0000,$0000,$0000,$0403,$0403,$1820,$6001,$0000
+	DEFW L7748,L7869,L7942,L7821				; Fish cloud
+LC14A	DEFW $0000,$0000,LC166,$0403,$0201,$0820,$2005,$0000
+	DEFW L60D9,L6000,L6061,L613A,L6091,L616A		; Small squid horizontal
+LC166	DEFW $0000,$0000,LC14A,$0201,$0403,$1810,$3005,$0000
+	DEFW L628B,L61B2,L6213,L62EC,L6243,L631C		; Small squid vertical
+LC182	DEFW $0000,$0000,LC19E,$0403,$0201,$0820,$2003,$0000
+	DEFW L7A1B,L798A,L79D3,L7A64,L79EB,L7A7C		; Electric eel horizontal
+LC19E	DEFW $0000,$0000,LC182,$0201,$0403,$1810,$3003,$0000	
+	DEFW L7AF5,L7AAC,L7B3E,L7B86,L7B56,L7B9E		; Electric eel vertical
+LC1BA	DEFW $0000,$0000,LC1D6,$0504,$0201,$0828,$2805,$0000
+	DEFW L7EF1,L7DD0,L7E51,L7F72,L7E91,L7FB2		; Snake fish horizontal
+LC1D6	DEFW $0000,$0000,LC1BA,$0201,$0504,$2010,$4005,$0000
+	DEFW L8133,L8012,L8093,L81B4,L80D3,L81F4		; Snake fish vertical
+LC1F2	DEFW $0000,$0000,$0000,$0807,$0302,$1040,$8006,$0000
+	DEFW L8839,L83D8,L8599,L89FA				; Squid
 
 ; Record templates
+; These templates are used to create records in LC4F0 area.
 ;
 ; Record template for 21-byte record - Boat
 LC20A	DEFB $F8,$06,$04,$01,$05	
@@ -3115,7 +3148,7 @@ LC29A	DEFB $00,$00,$04,$02,$00
 	DEFB $18,$00,$00,$00,$02,$00	
 	DEFW LC11A	
 	DEFB $00,$00,$02,$00,$00,$00
-; Record template for 26-byte record - Small fish cloud ??
+; Record template for 26-byte record - Fish cloud
 LC2B5	DEFB $00,$00,$04,$02,$00	
 	DEFW LB885	
 	DEFW $0000	
@@ -3123,7 +3156,7 @@ LC2B5	DEFB $00,$00,$04,$02,$00
 	DEFB $18,$00,$00,$00,$02,$00	
 	DEFW LC132	
 	DEFB $00,$00,$02,$00,$00,$00
-; Record template for 26-byte record - Small fish cloud ??
+; Record template for 26-byte record - Electric eel horizontal
 LC2D0	DEFB $00,$00,$04,$02,$00	
 	DEFW LB885	
 	DEFW $0000	
@@ -3131,15 +3164,15 @@ LC2D0	DEFB $00,$00,$04,$02,$00
 	DEFB $18,$00,$00,$00,$02,$00	
 	DEFW LC182	
 	DEFB $00,$00,$02,$00,$00,$00
-; Table of 8 record templates
-LC2EB	DEFW LC249	
-	DEFW LC264	
-	DEFW LC27F	
-	DEFW LC29A	
-	DEFW LC2B5	
-	DEFW LC2D0	
-	DEFW LC29A	
-	DEFW LC249
+; Table of 8 record templates for fish objects, horizontal movement
+LC2EB	DEFW LC249		; Fish
+	DEFW LC264		; Shark
+	DEFW LC27F		; Small squid horizontal
+	DEFW LC29A		; Long fish
+	DEFW LC2B5		; Fish cloud
+	DEFW LC2D0		; Electric eel horizontal
+	DEFW LC29A		; Long fish
+	DEFW LC249		; Fish
 ;
 ; Record template for 26-byte record - Snake fish horizontal
 LC2FB	DEFB $00,$00,$04,$02,$00	
@@ -3157,15 +3190,15 @@ LC316	DEFB $00,$00,$04,$02,$00
 	DEFB $18,$00,$00,$00,$02,$00	
 	DEFW LC1F2	
 	DEFB $00,$00,$02,$00,$00,$00
-; Table of 8 record templates
-LC331	DEFW LC249	
-	DEFW LC264	
-	DEFW LC27F	
-	DEFW LC29A	
-	DEFW LC2B5	
-	DEFW LC2D0	
-	DEFW LC2FB	
-	DEFW LC316
+; Table of 8 record templates for fish objects, horizontal movement
+LC331	DEFW LC249		; Fish
+	DEFW LC264		; Shark
+	DEFW LC27F		; Small squid horizontal
+	DEFW LC29A		; Long fish
+	DEFW LC2B5		; Fish cloud
+	DEFW LC2D0		; Electric eel horizontal
+	DEFW LC2FB		; Snake fish horizontal
+	DEFW LC316		; Squid
 ;
 ; Record template for 26-byte record - Round fish vertical
 LC341	DEFB $00,$00,$02,$04,$00	
@@ -3191,7 +3224,7 @@ LC377	DEFB $00,$00,$02,$04,$00
 	DEFB $1C,$00,$00,$00,$00,$02	
 	DEFW LC1D6	
 	DEFB $00,$00,$02,$00,$00,$00
-; Record template for 26-byte record - Small fish cloud ??
+; Record template for 26-byte record - Electric eel vertical
 LC392	DEFB $00,$00,$02,$04,$00	
 	DEFW LB972	
 	DEFW $0000	
@@ -3199,11 +3232,11 @@ LC392	DEFB $00,$00,$02,$04,$00
 	DEFB $1C,$00,$00,$00,$00,$02	
 	DEFW LC19E	
 	DEFB $00,$00,$02,$00,$00,$00
-; Table of 4 record templates
-LC3AD	DEFW LC341	
-	DEFW LC35C	
-	DEFW LC377	
-	DEFW LC392
+; Table of 4 record templates for fish objects, vertical movement
+LC3AD	DEFW LC341		; Round fish vertical
+	DEFW LC35C		; Small squid vertical
+	DEFW LC377		; Snake fish vertical
+	DEFW LC392		; Electric eel vertical
 ;
 ; Record template for 28-byte record - Round fish
 LC3B5	DEFB $00,$00,$04,$02,$00	
@@ -3221,7 +3254,7 @@ LC3D2	DEFB $00,$00,$04,$02,$00
 	DEFB $18,$00,$00,$00,$02,$00	
 	DEFW LC14A	
 	DEFB $04,$02,$02,$00,$00,$00,$00,$00
-; Record template for 28-byte record
+; Record template for 28-byte record - Electric eel horizontal
 LC3EF	DEFB $00,$00,$04,$02,$00	
 	DEFW LBA64	
 	DEFW $0000	
@@ -3238,28 +3271,28 @@ LC40C	DEFB $00,$00,$04,$02,$00
 	DEFW LC1BA	
 	DEFB $04,$02,$02,$00,$00,$00,$00,$00	
 ; Table of 4 record templates
-LC429	DEFW LC3B5	
-	DEFW LC3D2	
-	DEFW LC3EF	
-	DEFW LC40C
+LC429	DEFW LC3B5		; Round fish
+	DEFW LC3D2		; Small squid horizontal
+	DEFW LC3EF		; Electric eel horizontal
+	DEFW LC40C		; Snake fish horizontal
 
-LC431	LD A,(L5B18)		; get value 5 / 10 / 15 / 20, depending on LEVEL
+LC431	LD A,(L5B18)		; get Number of 26-byte records: 5 / 10 / 15 / 20, depending on LEVEL
 	LD B,A	
 	LD IX,(L5B23)		; now IX = record address in block LC4F0
 LC439	PUSH BC	
 	DEC (IX+$0F)	
 	CALL Z,LB737	
-	LD BC,$001A		; 26
-	ADD IX,BC	
+	LD BC,$001A		; 26 - record size
+	ADD IX,BC		; next record
 	POP BC	
 	DJNZ LC439	
-	LD A,(L5B19)		; get value 12 / 27 / 42 / 57, depending on LEVEL
+	LD A,(L5B19)		; get Number of 28-byte records: 12 / 27 / 42 / 57, depending on LEVEL
 	LD B,A	
 LC44C	PUSH BC	
 	DEC (IX+$0F)	
 	CALL Z,LB737	
-	LD BC,$001C		; 28
-	ADD IX,BC	
+	LD BC,$001C		; 28 - record size
+	ADD IX,BC		; next record
 	POP BC	
 	DJNZ LC44C	
 	RET
@@ -3283,6 +3316,8 @@ LC474	PUSH BC
 	DJNZ LC474	
 	RET	
 
+; Moving procedure for Boat object
+; I: IX = object record
 LC481	LD A,(IX+$10)	
 	OR A	
 	JR NZ,LC490	
@@ -3320,6 +3355,7 @@ LC4BA	INC (IX+$0E)
 	RET	
 
 ; Delay ??
+; I: A = ??
 LC4D5	OR A	
 	RET Z	
 LC4D7	LD BC,(L5B25)		; get value 150 / 100 / 50 / 1, depending on Game level
@@ -3354,13 +3390,8 @@ LC4E7	DEFB $FB,$02,$00,$2C,$42,$4C,$46,$49
 ;	(IX+$12)
 ; word	(IX+$13),(IX+$14) - record address in block LC092
 LC4F0	DEFB $2B,$31
-LC4F2	DEFB $30,$32,$33,$0D,$DC,$3C	
+	DEFB $30,$32,$33,$0D,$DC,$3C	
 	DEFB $47,$43,$32,$20,$4A,$52,$20,$47
 ;	DEFS 5
-;LC505
-;LC51A
-;LC52F
-;LC544
-;LC559
 
 ;----------------------------------------------------------------------------
