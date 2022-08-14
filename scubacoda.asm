@@ -7,7 +7,7 @@
 
 	ORG $5B00
 
-L5B00	DEFB $00	; ???
+L5B00	DEFB $00	; ??? 0..99
 L5B01	DEFW $0000	; ???
 L5B03	DEFW $0000	; Screen position on mini-map (H = row 0..31, L = column 0..31)
 RANDOM	DEFW $0167	; Current number in pseudo-random sequence, see routine 9D84
@@ -17,16 +17,16 @@ L5B0A	DEFB $00	; ??? saved trunk width while building the labyrinth
 L5B0B	DEFW $0000	; Screen position on 256x256 map (H = row, L = column)
 L5B0D	DEFB $08	; Delay value: 7 / 5 / 3 / 1, depending on LEVEL
 L5B0E	DEFB $08	; Delay value for Octopus: 10 / 8 / 6 / 4, depending on LEVEL
-L5B0F	DEFB $00	; ???
+L5B0F	DEFB $00	; ??? $03
 LEVEL	DEFB $04	; Game level selected: 1..4
 L5B11	DEFW $0000	; ???
 L5B13	DEFB $19	; Number of Meduza objects:  13 / 17 / 21 / 25, depending on LEVEL
 L5B14	DEFB $1E	; Number of Round fishes:    13 / 17 / 21 / 25, depending on LEVEL
-L5B15	DEFB $38	; Number of 21-byte records: 27 / 35 / 43 / 51, depending on LEVEL; starts at LC4F0
-L5B16	DEFB $1E	; Number of 26-byte records: 18 / 22 / 26 / 31, depending on LEVEL; starts at (L5B1F)
-L5B17	DEFB $32	; Number of 26-byte records: 26 / 34 / 42 / 50, depending on LEVEL; starts at (L5B21)
-L5B18	DEFB $14	; Number of 26-byte records:  5 / 10 / 15 / 20, depending on LEVEL; starts at (L5B23)
-L5B19	DEFB $46	; Number of 28-byte records: 12 / 27 / 42 / 57, depending on LEVEL
+L5B15	DEFB $38	; Number of 21-byte records (27 / 35 / 43 / 51), group I;   starts at LC4F0
+L5B16	DEFB $1E	; Number of 26-byte records (18 / 22 / 26 / 31), group II;  starts at (L5B1F)
+L5B17	DEFB $32	; Number of 26-byte records (26 / 34 / 42 / 50), group III; starts at (L5B21)
+L5B18	DEFB $14	; Number of 26-byte records ( 5 / 10 / 15 / 20), group IV;  starts at (L5B23)
+L5B19	DEFB $46	; Number of 28-byte records (12 / 27 / 42 / 57), group V
 L5B1A	DEFB $02	; ???
 L5B1B	DEFB $02	; ???
 L5B1C	DEFB $02	; ???

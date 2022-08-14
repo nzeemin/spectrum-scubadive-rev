@@ -941,7 +941,7 @@ LA209	LD A,(HL)
 	JR NZ,LA278	
 	LD A,(L5B00)	
 	INC A	
-	CP $64	
+	CP $64			; 100
 	JR Z,LA278	
 	LD (L5B00),A	
 	LD A,$0A	
@@ -1482,8 +1482,8 @@ LB376	LD A,(DE)		; get pixels
 LB392	DEFB $00,$00,$00,$00,$00,$00,$00,$00	
 	DEFB $32,$32,$32,$1D,$02,$32
 
-; I: IX = record address in block LC4F0
-; I: IY = record address in block LC092
+; I: IX = record address in LC4F0 area
+; I: IY = record address in LC092 area
 LB3A0	BIT 4,(IX+$0D)	
 	JR Z,LB3AB
 ;
@@ -1594,8 +1594,8 @@ LB466	RR (HL)
 	POP HL	
 	RET
 
-; I: IX = record address in block LC4F0
-; I: IY = record address in block LC092
+; I: IX = record address in LC4F0 area
+; I: IY = record address in LC092 area
 LB470	BIT 0,(IX+$0D)	
 	JR Z,LB479	
 	CALL LB3A0	
@@ -2665,7 +2665,7 @@ LBD7B	LD (IX+$12),A
 	RET	
 
 ; I: L = ??
-; I: C = ??
+; I: C = ??; $0F $1F $3F
 ; I: IX = ??; $C505 $C51A $C52F $C544 $C559
 LBD83	LD A,L	
 	AND C	
@@ -2681,7 +2681,7 @@ LBD83	LD A,L
 	CALL NextRandom		; Calculate next random value
 	LD A,H	
 	AND $07			; 0..7
-LBD9B	LD HL,LBDAA		; !!! mutable argument
+LBD9B	LD HL,LBDAA		; !!! mutable argument LBDAA or LBDB2
 	ADD A,L	
 	LD L,A	
 	JR NC,LBDA3	
@@ -2699,7 +2699,7 @@ LBDBA	CALL LBEC7
 	LD A,(L5B03+1)		; get screen position (row) on mini-map
 	CP $03			; < 3 ?
 	JR NC,LBDCB	
-	CALL LBEB2	
+	CALL LBEB2		; ??? process 21-byte records: Boat, meduzas, round fishes
 	CALL LBE58	
 	RET	
 LBDCB	CP $04	
@@ -2720,32 +2720,32 @@ LBDE5	CALL LC45C
 LBDE9	DEFS $01
 
 LBDEA	LD A,(L5B03+1)		; get screen position (row) on mini-map
-	CP $03	
-	JR NC,LBDFE	
-	CALL LBE9A	
-	CALL LBE40	
-	LD A,(L5B1A)	
-	CALL LC4D5	
+	CP $03			; row 0..3 ?
+	JR NC,LBDFE		; no => jump
+	CALL LBE9A		; ??? process 21-byte records: Boat, meduzas, round fishes
+	CALL LBE40		; ??? process 26-byte records
+	LD A,(L5B1A)		; 2
+	CALL LC4D5		; Delay ??
 	RET	
-LBDFE	CP $04	
-	JR NC,LBE0F	
-	CALL LBE40	
+LBDFE	CP $04			; row 4 ?
+	JR NC,LBE0F		; no => jump
+	CALL LBE40		; ??? process 26-byte records
 	CALL LBE6D	
-	LD A,(L5B1B)	
-	CALL LC4D5	
+	LD A,(L5B1B)		; 2
+	CALL LC4D5		; Delay ??
 	RET	
-LBE0F	CP $06	
-	JR NC,LBE1D	
+LBE0F	CP $06			; row 5..6 ?
+	JR NC,LBE1D		; no => jump
 	CALL LBE6D	
-	LD A,(L5B1C)	
-	CALL LC4D5	
+	LD A,(L5B1C)		; 2
+	CALL LC4D5		; Delay ??
 	RET	
-LBE1D	CP $09	
-	JR NC,LBE36	
+LBE1D	CP $09			; row 7..9 ?
+	JR NC,LBE36		; no => jump
 	CALL LBE6D	
 	LD HL,LBDE9	
-	LD A,(L5B1D)	
-	CALL LC4D5	
+	LD A,(L5B1D)		; 2
+	CALL LC4D5		; Delay ??
 	LD A,$01	
 	XOR (HL)	
 	LD (HL),A	
@@ -2753,13 +2753,14 @@ LBE1D	CP $09
 	CALL LC431	
 	RET	
 LBE36	CALL LC431	
-	LD A,(L5B1E)	
-	CALL LC4D5	
+	LD A,(L5B1E)		; 5
+	CALL LC4D5		; Delay ??
 	RET
 
+; ??? process 26-byte records
 LBE40	LD A,(L5B16)		; get Number of 26-byte records: 18 / 22 / 26 / 31, depending on LEVEL	
 	LD B,A			; loop counter
-	LD IX,(L5B1F)		; now IX = record address in block LC4F0
+	LD IX,(L5B1F)		; now IX = record address in LC4F0 area
 LBE48	PUSH BC	
 	DEC (IX+$0F)	
 	CALL Z,LB737	
@@ -2769,9 +2770,10 @@ LBE48	PUSH BC
 	DJNZ LBE48	
 	RET
 
+; ??? process 26-byte records
 LBE58	LD A,(L5B16)		; get Number of 26-byte records: 18 / 22 / 26 / 31, depending on LEVEL
 	LD B,A	
-	LD IX,(L5B1F)		; now IX = record address in block LC4F0
+	LD IX,(L5B1F)		; now IX = record address in LC4F0 area
 LBE60	PUSH BC	
 	CALL LB7BB	
 	LD BC,$001A		; 26 - record size
@@ -2780,9 +2782,9 @@ LBE60	PUSH BC
 	DJNZ LBE60	
 	RET
 
-LBE6D	LD A,(L5B17)		; get Number of 26-byte records: 26 / 34 / 42 / 50, depending on LEVEL	
+LBE6D	LD A,(L5B17)		; get Number of 26-byte records (26 / 34 / 42 / 50) in group III
 	LD B,A	
-	LD IX,(L5B21)		; now IX = record address in block LC4F0
+	LD IX,(L5B21)		; now IX = record address in LC4F0 area
 LBE75	PUSH BC	
 	DEC (IX+$0F)	
 	CALL Z,LB737	
@@ -2792,7 +2794,7 @@ LBE75	PUSH BC
 	DJNZ LBE75	
 	RET	
 
-LBE85	LD A,(L5B17)		; get Number of 26-byte records: 26 / 34 / 42 / 50, depending on LEVEL
+LBE85	LD A,(L5B17)		; get Number of 26-byte records (26 / 34 / 42 / 50) in group III
 	LD B,A	
 	LD IX,(L5B21)	
 LBE8D	PUSH BC	
@@ -2803,24 +2805,26 @@ LBE8D	PUSH BC
 	DJNZ LBE8D	
 	RET
 
-LBE9A	LD A,(L5B15)		; get Number of 21-byte records: 27 / 35 / 43 / 51, depending on LEVEL	
+; ??? process 21-byte records in group I: Boat, meduzas, round fishes
+LBE9A	LD A,(L5B15)		; get Number of 21-byte records in group I: 27 / 35 / 43 / 51, depending on LEVEL
 	LD B,A			; loop count
 	LD IX,LC4F0		; record address
 LBEA2	PUSH BC	
 	DEC (IX+$0F)	
 	CALL Z,LB737	
-	LD BC,$0015		; 21 - record size
+	LD BC,$0015		; 21 bytes - record size
 	ADD IX,BC		; next record
 	POP BC	
 	DJNZ LBEA2	
 	RET
 
-LBEB2	LD A,(L5B15)		; get Number of 21-byte records: 27 / 35 / 43 / 51, depending on LEVEL
+; ??? process 21-byte records in group I: Boat, meduzas, round fishes
+LBEB2	LD A,(L5B15)		; get Number of 21-byte records in group I: 27 / 35 / 43 / 51, depending on LEVEL
 	LD B,A			; loop count
 	LD IX,LC4F0		; record address
 LBEBA	PUSH BC	
 	CALL LB7BB	
-	LD BC,$0015		; 21 - record size
+	LD BC,$0015		; 21 bytes - record size
 	ADD IX,BC		; next record
 	POP BC	
 	DJNZ LBEBA	
@@ -2840,10 +2844,10 @@ LBED0	LD (HL),A
 
 LBEDB	CALL LBEC7	
 	LD HL,LBDAA	
-	LD (LBD9B+1),HL	
+	LD (LBD9B+1),HL		; set table address
 	LD HL,LC20A		; record template for Boat
 	LD DE,LC4F0		; record address 
-	LD BC,$0015		; 21
+	LD BC,$0015		; 21 bytes
 	LDIR			; Copy 21 bytes from LC20A to LC4F0
 	LD A,(L5B13)		; get Number of Meduza objects
 	LD B,A			; loop counter
@@ -2851,7 +2855,7 @@ LBEF3	PUSH BC
 	LD HL,LC21F		; record template for Meduza
 	PUSH DE	
 	POP IX	
-	LD BC,$0015		; 21 - record size
+	LD BC,$0015		; 21 bytes - record size
 	LDIR			; Copy 21 bytes
 	PUSH DE	
 	CALL NextRandom		; Calculate next random value
@@ -2872,7 +2876,7 @@ LBF1D	PUSH BC
 	LD HL,LC234		; record template for Round fish
 	PUSH DE	
 	POP IX	
-	LD BC,$0015		; 21 - record size
+	LD BC,$0015		; 21 bytes - record size
 	LDIR			; Copy template to record
 	PUSH DE	
 	CALL NextRandom		; Calculate next random value
@@ -2899,23 +2903,23 @@ LBF44	LD (IX+$03),A
 	LD (IX+$11),$FE	
 LBF5D	DJNZ LBF1D	
 	LD (L5B1F),DE		; save address for 26-byte records
-	LD A,(L5B16)		; get number of records: 18 / 22 / 26 / 31, depending on LEVEL
+	LD A,(L5B16)		; get number of 26-byte records in group II
 	LD HL,$0F1B	
 	LD IY,LC2EB		; table address with record templates, horizontal movement
 	CALL LBFB0	
 	LD (L5B21),DE		; save address for 26-byte records
-	LD A,(L5B17)		; get number of records: 26 / 34 / 42 / 50, depending on LEVEL	
+	LD A,(L5B17)		; get number of 26-byte records in group III
 	LD HL,$2A3B	
 	LD IY,LC331		; table address with record templates, horizontal movement
 	CALL LBFB0	
 	LD (L5B23),DE		; save address for 26-byte records
 	LD IY,LBFA0	
-	LD A,(L5B18)		; get number of records: 5 / 10 / 15 / 20, depending on LEVEL
+	LD A,(L5B18)		; get number of 26-byte records in group IV
 	LD HL,LBDB2	
-	LD (LBD9B+1),HL	
+	LD (LBD9B+1),HL		; set table address
 	CALL LC009	
 	LD IY,LBFA8	
-	LD A,(L5B19)		; get number of records: 12 / 27 / 42 / 57, depending on LEVEL
+	LD A,(L5B19)		; get number of 28-byte records in group V
 	CALL LC009	
 LBF9F	RET
 
@@ -2924,7 +2928,7 @@ LBFA8	DEFB $10,$11,$29,$C4,$1C,$00,$00,$0F
 
 ; I: IX = ???
 ; I: IY = address of table with 8 record template addresses: LC2EB or LC331
-; I: HL = ???
+; I: HL = ???; $0F1B or $2A3B
 ; I: A = number of records, loop counter
 ; O: DE = address ??
 LBFB0	LD (LBFC3+1),IY	
@@ -2937,14 +2941,14 @@ LBFB8	PUSH BC
 	AND $0E			; 0 / 2 / 4 / 6 / 8 / 10 / 12 / 14
 	LD E,A	
 	LD D,$00	
-LBFC3	LD HL,$0000		; table address !!! mutable argument
+LBFC3	LD HL,$0000		; table address with 8 record template addresses !!! mutable argument
 	ADD HL,DE	
 	LD C,(HL)	
 	INC HL	
 	LD B,(HL)		; now BC = record template address
 	LD L,C	
-	LD H,B	
-	LD BC,$001A		; 26 - record size
+	LD H,B			; HL = record template address
+	LD BC,$001A		; 26 bytes - record size
 	POP DE	
 	PUSH DE	
 	POP IX	
@@ -2976,7 +2980,7 @@ LBFC3	LD HL,$0000		; table address !!! mutable argument
 
 LC007	DEFW $0000		; temp storage for HL
 
-; I: IY ???
+; I: IY ???; LBFA0 or LBFA8
 ; I: A = number of records
 LC009	LD B,A	
 	LD (IY+$05),E	
@@ -3276,28 +3280,28 @@ LC429	DEFW LC3B5		; Round fish
 	DEFW LC3EF		; Electric eel horizontal
 	DEFW LC40C		; Snake fish horizontal
 
-LC431	LD A,(L5B18)		; get Number of 26-byte records: 5 / 10 / 15 / 20, depending on LEVEL
-	LD B,A	
-	LD IX,(L5B23)		; now IX = record address in block LC4F0
+LC431	LD A,(L5B18)		; get Number of 26-byte records (5 / 10 / 15 / 20) in group IV
+	LD B,A			; loop counter
+	LD IX,(L5B23)		; now IX = record address in LC4F0 area
 LC439	PUSH BC	
 	DEC (IX+$0F)	
 	CALL Z,LB737	
-	LD BC,$001A		; 26 - record size
+	LD BC,$001A		; 26 bytes - record size
 	ADD IX,BC		; next record
 	POP BC	
 	DJNZ LC439	
-	LD A,(L5B19)		; get Number of 28-byte records: 12 / 27 / 42 / 57, depending on LEVEL
-	LD B,A	
+	LD A,(L5B19)		; get Number of 28-byte records (12 / 27 / 42 / 57) in group V
+	LD B,A			; loop counter
 LC44C	PUSH BC	
 	DEC (IX+$0F)	
 	CALL Z,LB737	
-	LD BC,$001C		; 28 - record size
+	LD BC,$001C		; 28 bytes - record size
 	ADD IX,BC		; next record
 	POP BC	
 	DJNZ LC44C	
 	RET
 
-LC45C	LD A,(L5B18)		; get value 5 / 10 / 15 / 20, depending on LEVEL
+LC45C	LD A,(L5B18)		; get number of 26-byte records (5 / 10 / 15 / 20) in group IV
 	LD B,A	
 	LD IX,(L5B23)	
 LC464	PUSH BC	
@@ -3306,7 +3310,7 @@ LC464	PUSH BC
 	ADD IX,BC	
 	POP BC	
 	DJNZ LC464	
-	LD A,(L5B19)		; get value 12 / 27 / 42 / 57, depending on LEVEL
+	LD A,(L5B19)		; get number of 28-byte records (12 / 27 / 42 / 57) in group V
 	LD B,A	
 LC474	PUSH BC	
 	CALL LB7BB	
@@ -3355,7 +3359,7 @@ LC4BA	INC (IX+$0E)
 	RET	
 
 ; Delay ??
-; I: A = ??
+; I: A = ?? 2 or 5
 LC4D5	OR A	
 	RET Z	
 LC4D7	LD BC,(L5B25)		; get value 150 / 100 / 50 / 1, depending on Game level
@@ -3369,12 +3373,12 @@ LC4D7	LD BC,(L5B25)		; get value 150 / 100 / 50 / 1, depending on Game level
 LC4E7	DEFB $FB,$02,$00,$2C,$42,$4C,$46,$49	
 	DEFB $4C
 
-; Object records:
-;  1. 21-byte records at LC4F0, count in L5B15: Boat, meduzas, round fishes
-;  2. 26-byte records at (L5B1F), count in L5B16
-;  3. 26-byte records at (L5B21), count in L5B17
-;  4. 26-byte records at (L5B23), count in L5B18
-;  5. 28-byte records, count in L5B19
+; Object record groups:
+;  I.   21-byte records at  LC4F0,  count in L5B15: Boat, meduzas, round fishes
+;  II.  26-byte records at (L5B1F), count in L5B16
+;  III. 26-byte records at (L5B21), count in L5B17
+;  IV.  26-byte records at (L5B23), count in L5B18
+;  V.   28-byte records, count in L5B19
 ; Record format:
 ; word	(IX+$00),(IX+$01) - column, row 0..255
 ; byte	(IX+$02) - ?? 0..7

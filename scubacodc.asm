@@ -317,9 +317,9 @@ InitLevelVars
 	SUB $05	
 	ADD A,A	
 	INC A			; A = (LEVEL * 4 + 9) * 2 + 1 => 27 / 35 / 43 / 51
-	LD (L5B15),A	
+	LD (L5B15),A		; set Number of 21-byte records in group I
 	DEC A			; A = (LEVEL * 4 + 9) * 2 => 26 / 34 / 42 / 50
-	LD (L5B17),A		; set Number of 26-byte records
+	LD (L5B17),A		; set Number of 26-byte records in group III
 	LD A,(LEVEL)		; LEVEL
 	LD C,A	
 	ADD A,A	
@@ -330,7 +330,7 @@ InitLevelVars
 	ADD A,A	
 	ADD A,C	
 	SUB $03			; A = LEVEL * 5 * 3 - 3 => 12 / 27 / 42 / 57
-	LD (L5B19),A		; Number of 28-byte records
+	LD (L5B19),A		; set Number of 28-byte records in group V
 	LD HL,$0001	
 	LD (L5B25),HL	
 	LD A,(LEVEL)		; LEVEL
