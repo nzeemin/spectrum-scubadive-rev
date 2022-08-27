@@ -126,15 +126,15 @@ LDA51	LD (HL),E		; set attribute
 	RET	
 
 ; Print char and shift current position right
-LDA59	LD HL,($DC7E)	
+LDA59	LD HL,(LDC7E)	
 	INC L	
-	LD ($DC7E),HL	
+	LD (LDC7E),HL	
 	DEC L	
-	JR $DA6B	
+	JR LDA6B	
 ; Print char and shift current position down
-LDA63	LD HL,($DC7E)	
+LDA63	LD HL,(LDC7E)	
 	INC H	
-	LD ($DC7E),HL	
+	LD (LDC7E),HL	
 	DEC H	
 ; Print char
 ; I: HL = char coords
@@ -153,7 +153,7 @@ LDA6B	PUSH HL
 	BIT 7,A	
 	JR NZ,LDA83	
 	LD BC,ROM_CHARSET	; ROM font address, for chars $20..$7F
-	JR $DA86	
+	JR LDA86	
 LDA83	LD BC,LDC80		; Tiles 8x8 address, for chars $80..$AE
 LDA86	ADD HL,BC	
 	LD B,$08		; repeat 8 times
@@ -577,7 +577,7 @@ LDF45	DEFB $00,$00,$00,$00,$00,$00,$00,$00
 	DEFB $00,$00,$00,$00,$00,$00,$00,$00	
 	DEFB $00,$00,$00,$00,$00,$00,$00,$00	
 	DEFB $00,$00,$00,$00,$00,$00,$00,$00	
-	DEFB $00,$00,$00,$00,$00,$00,$00,$00	
+LDF8D	DEFB $00,$00,$00,$00,$00,$00,$00,$00	
 	DEFB $00,$00,$00,$00,$00,$00,$00,$00	
 	DEFB $00,$00,$00,$00,$00,$00,$00,$00	
 	DEFB $00,$00,$00,$00,$00,$00,$00,$00	
@@ -685,7 +685,7 @@ LE0CC	DEC (IX+$01)		; one row up
 	RES 3,(IX+$0D)	
 	LD A,(IX+$01)		; get row 0..255
 	CP (IX+$1E)	
-	JR NC,$E120	
+	JR NC,LE120	
 	ADD A,$08	
 	LD (IX+$01),A		; set row
 	DEC H			; one block up
@@ -951,7 +951,7 @@ LE33E	DEFB $04	; (IX+$03) ??? Y shift 0..7, previous value
 LE33F	DEFB $00	; (IX+$04) DX value for the Angle, -2..2, see table DF25
 LE340	DEFB $00	; (IX+$05) DY value for the Angle, -2..2, see table DF25
 LE341	DEFB $04	; (IX+$06) Angle 0..15, initially 4
-LE342	DEFW $DF8D	; (IX+$07) ???
+LE342	DEFW LDF8D	; (IX+$07) ???
 LE344	DEFW $0000	; (IX+$09) Sprite address
 LE346	DEFW $0000	; (IX+$0B) Sprite address
 LE348	DEFB $18	; (IX+$0D) ??? bits 0/1/2/3/4/5/6/7
@@ -1207,7 +1207,7 @@ LE510	POP DE
 	LD HL,(L5B48)	
 	INC HL	
 	LD (L5B48),HL	
-	JP $E418	
+	JP LE418	
 LE533	PUSH BC	
 	EX (SP),HL	
 	POP BC	
@@ -1381,7 +1381,7 @@ LE68A	LD HL,LE652		; Divers on the boat sprite address base
 LE694	ADD HL,DE	
 	DJNZ LE694	
 LE697	LD B,$06		; repeat 6 times
-	LD DE,$8CD6		; ???
+	LD DE,L8C9A+60		; $8CD6 = $8C9A + 60
 LE69C	PUSH BC	
 	LDI			; copy pixels
 	LDI			; copy pixels
@@ -1575,7 +1575,7 @@ LE88A	LD (IX+$1E),$00
 	CALL PlayMelody		; Play melody
 	LD A,(IX+$1A)	
 	CP $06	
-	JR NZ,$E8FA	
+	JR NZ,LE8FA	
 	LD A,(IX+$03)	
 	CP $07	
 	JR NZ,LE8FA	
@@ -1594,7 +1594,7 @@ LE88A	LD (IX+$1E),$00
 	RES 0,(IX+$26)	
 	LD A,(L5B00)	
 	CP $08	
-	JR NZ,$E8FA	
+	JR NZ,LE8FA	
 	LD A,(L5B0F)	
 	CP $03	
 	JR NZ,LE8FA	
@@ -1758,7 +1758,7 @@ LEABF	POP HL
 	LD B,$06		; repeat 6 times
 LEAC2	LD (HL),$80	
 	INC HL	
-	DJNZ $EAC2	
+	DJNZ LEAC2	
 	LD BC,(L5B48)	
 	LD (HL),C	
 	INC HL	
@@ -1863,7 +1863,7 @@ LEB90	LD A,(KSTATE5)
 	JR NZ,LEB90	
 LEB96	LD A,(KSTATE5)	
 	OR A			; key pressed?
-	JR Z,$EB96	
+	JR Z,LEB96	
 	LD A,(LAST_K)		; get LAST-K - Last key pressed
 	CP $0C	
 	JR Z,LEBB9	

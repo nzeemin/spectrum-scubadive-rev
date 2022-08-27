@@ -15,7 +15,7 @@
 
 L9C50	DEFB $00	; $00 = no Octopus, $01 = we have Octopus on the game screen
 L9C51	DEFW $0000	; Octopus screen address
-L9C53	DEFW $A41B	; Octopus previous sprite address or LA41B for empty sprite
+L9C53	DEFW LA41B	; Octopus previous sprite address or LA41B for empty sprite
 L9C55	DEFB $04	; Octopus phase
 
 ; Draw game screen
@@ -147,7 +147,7 @@ L9CEB	LD (IX+$00),C		; set screen attribute
 	LD E,A	
 	POP BC	
 	DEC B	
-	JP NZ,L9C69		; continue vertical lool for blocks on the screen
+	JP NZ,L9C69		; continue vertical loop for blocks on the screen
 	LD A,(L9C50)		; get Octopus flag
 	OR A			; do we have the Octopus on the screen?
 	JR Z,L9D38		; no => skip
@@ -521,6 +521,7 @@ L9F78	LD A,(L5B0A)
 	LD (L5B09),A		; restore trunk width
 	JP L9E5F		; continue the loop by mini-map rows
 
+; Initialize left part of the map
 L9F81	LD (L5B01),HL	
 L9F84	DEC L	
 	PUSH HL	
@@ -619,6 +620,7 @@ LA02C	LD A,$0E
 	DEC H	
 	JP L9F84	
 
+; Initialize right part of the map
 LA03B	LD (L5B01),HL	
 LA03E	INC L	
 	PUSH HL	
@@ -1396,14 +1398,14 @@ LB2F6	DEFB $03,$0C,$01,$EE,$00,$E6,$00,$64	; sprB2F6
 	DEFB $00,$10,$00,$00,$00,$00,$00,$00
 LB306	DEFB $00,$00,$00,$60,$00,$78,$0C,$38	; sprB306
 	DEFB $3F,$3C,$0F,$8E,$0F,$B6,$00,$DB
-; Data block at B316
+; Octopus period
 LB316	DEFB $09	
 
 ; Process Octopus, draw if needed
 LB317	LD A,(L9C50)		; get Octopus flag
 	OR A	
 	RET Z	
-	LD HL,LB316	
+	LD HL,LB316		; Octopus period address
 	DEC (HL)	
 	RET NZ	
 	LD (HL),$10	
@@ -1991,7 +1993,7 @@ LB737	LD D,(IX+$14)
 	LD (IX+$03),A	
 	CALL LB5E0	
 	BIT 0,(IX+$0D)	
-	JR Z,$B77B	
+	JR Z,LB77B	
 	BIT 7,(IX+$0D)	
 	JR NZ,LB79E	
 	CALL LB470	
@@ -2520,7 +2522,7 @@ LBBF6	LD (IX+$0B),E
 	LD L,(IX+$00)		; get row 0..255
 	LD H,(IX+$01)		; get column 0..255
 	BIT 7,(IX+$12)	
-	JR NZ,$BC1C	
+	JR NZ,LBC1C	
 	LD A,H	
 	ADD A,(IY+$08)	
 	SUB (IY+$06)	
